@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --base-blue: #0052FF;
+  --base-dark: #0A1429;
+  --base-light: #E6F0FF;
+  --accent-cyan: #00F0FF;
+  --neon-purple: #C724FF;
+}
+
+body {
+  background: linear-gradient(180deg, #0A1429 0%, #001233 100%);
+  color: #ffffff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.glass {
+  background: rgba(10, 20, 41, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 82, 255, 0.3);
+}
