@@ -1,13 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { motion } from 'framer-motion';
 
+interface GameObject {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  color: string;
+}
+
 export default function BasedDodge() {
   const [gameStarted, setGameStarted] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
+
+  // Game variables (will be expanded)
+  const player = useRef({ x: 400, y: 500, size: 28, speed: 8 });
+  const obstacles = useRef<GameObject[]>([]);
+  const particles = useRef<any[]>([]);
+  const keys = useRef<{ [key: string]: boolean }>({});
+
+  const startGame = () => {
+    setGameStarted(true);
+    setGameOver(false);
+    setScore(0);
+    player.current = { x: 400, y: 500, size: 28, speed: 8 };
+    obstacles.current = [];
+    particles.current = [];
+  };
+
+  // Canvas game loop will be fully implemented in next commits
 
   return (
     <div className="min-h-screen bg-[#0A1429] text-white overflow-hidden relative">
@@ -19,77 +47,74 @@ export default function BasedDodge() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center">
-              <span className="text-2xl">⚡</span>
+              ⚡
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tighter">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
-              <p className="text-xs text-[#00F0FF]/70 -mt-1">ENDLESS DODGER ON BASE</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="text-sm font-mono text-[#00F0FF]">
-              HIGH SCORE: <span className="text-white font-bold">{highScore}</span>
+          <div className="flex items-center gap-8">
+            <div className="font-mono text-lg">
+              SCORE: <span className="text-[#00F0FF] font-bold">{score}</span>
+            </div>
+            <div className="font-mono text-sm text-[#00F0FF]">
+              HIGH: {highScore}
             </div>
             <ConnectWallet />
           </div>
         </div>
       </header>
 
-      <main className="pt-24 flex items-center justify-center min-h-screen relative">
-        {!gameStarted ? (
-          <div className="text-center z-10">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="mb-8 inline-block">
-                <div className="text-[180px] leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF]">
-                  DODGE
-                </div>
-                <div className="text-6xl font-bold text-[#00F0FF] -mt-6 tracking-[12px]">ON BASE</div>
+      <main className="pt-24 flex items-center justify-center min-h-screen">
+        {!gameStarted && !gameOver && (
+          <div className="text-center">
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
+              <div className="text-[160px] font-black tracking-[-8px] leading-none bg-gradient-to-b from-white to-[#00F0FF] bg-clip-text text-transparent">
+                BASEDDODGE
               </div>
-
-              <p className="text-2xl mb-12 max-w-md mx-auto text-[#E6F0FF]">
-                Survive the endless neon storm.<br />Built on the fastest Layer 2.
-              </p>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setGameStarted(true)}
-                className="px-16 py-6 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-3xl font-bold tracking-wider hover:brightness-110 transition-all shadow-2xl shadow-[#0052FF]/50"
-              >
-                START DODGING
-              </motion.button>
-
-              <div className="mt-16 text-xs text-[#0052FF80] font-mono">
-                BASE • SEPOLIA • ONCHAINKIT • WAGMI • VIEM
-              </div>
+              <p className="text-2xl text-[#00F0FF] mt-2">ENDLESS NEON DODGER</p>
             </motion.div>
+
+            <motion.button
+              onClick={startGame}
+              whileHover={{ scale: 1.08 }}
+              className="px-20 py-7 text-4xl font-bold bg-gradient-to-r from-[#0052FF] via-[#00A3FF] to-[#00F0FF] rounded-3xl shadow-[0_0_60px_#0052FF] hover:shadow-[0_0_90px_#00F0FF] transition-all"
+            >
+              LAUNCH INTO BASE
+            </motion.button>
           </div>
-        ) : (
-          <div className="relative w-full max-w-[1000px] mx-auto">
-            {/* Game will be implemented in future commits */}
-            <div className="glass rounded-3xl p-8 text-center">
-              <div className="text-6xl mb-8">🚧 GAME ENGINE COMING IN NEXT COMMITS</div>
-              <p className="text-xl mb-6">Stunning canvas-based endless dodger with Base aesthetic</p>
-              <button
-                onClick={() => setGameStarted(false)}
-                className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+        )}
+
+        {(gameStarted || gameOver) && (
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={900}
+              height={620}
+              className="border-4 border-[#0052FF] rounded-3xl shadow-2xl shadow-[#0052FF]/40 bg-black"
+            />
+            
+            {gameOver && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 rounded-3xl"
               >
-                Back to Menu
-              </button>
-            </div>
+                <div className="text-7xl mb-4">💥</div>
+                <div className="text-5xl font-bold mb-2 text-[#FF2D55]">CRASHED</div>
+                <div className="text-3xl mb-8">FINAL SCORE: <span className="text-[#00F0FF]">{score}</span></div>
+                <button
+                  onClick={startGame}
+                  className="px-12 py-5 bg-[#0052FF] hover:bg-[#00F0FF] text-white font-bold text-2xl rounded-2xl transition-colors"
+                >
+                  TRY AGAIN
+                </button>
+              </motion.div>
+            )}
           </div>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs text-[#0052FF60] font-mono z-50">
-        MADE ON BASE • ENDLESS MODE • HIGH SCORE SAVED ONCHAIN SOON
-      </footer>
     </div>
   );
 }
