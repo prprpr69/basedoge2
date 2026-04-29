@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { useAccount, useWriteContract } from 'wagmi';
-import { motion } from 'framer-motion';
+import { useAccount } from 'wagmi';
+import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 interface Obstacle {
@@ -27,42 +27,31 @@ interface Particle {
   size: number;
 }
 
-// Simple onchain high score contract ABI (we will deploy a real one later)
-const HIGHSCORE_ABI = [
-  {
-    "inputs": [],
-    "name": "getHighScore",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "_score", "type": "uint256"}],
-    "name": "setHighScore",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-] as const;
-
-const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // Placeholder - will be replaced in later commits
+interface LeaderboardEntry {
+  address: string;
+  score: number;
+  timestamp: number;
+}
 
 export default function BasedDodge() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [onchainHighScore, setOnchainHighScore] = useState(0);
-  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([
+    { address: "0x8aB...cD3f", score: 1240, timestamp: Date.now() - 100000 },
+    { address: "0x4f9...aB2e", score: 980, timestamp: Date.now() - 340000 },
+    { address: "0x2e7...9K1p", score: 760, timestamp: Date.now() - 780000 },
+  ]);
 
   const { address, isConnected } = useAccount();
-  const { writeContract } = useWriteContract();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(0);
 
-  const player = useRef({ x: 450, y: 480, size: 32, speed: 9 });
+  const player = useRef({ x: 450, y: 480, size: 32, speed: 9.2 });
   const obstacles = useRef<Obstacle[]>([]);
   const particles = useRef<Particle[]>([]);
   const keys = useRef<{ [key: string]: boolean }>({});
@@ -74,33 +63,27 @@ export default function BasedDodge() {
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
 
-  const playBeep = (freq: number, duration: number, type: 'sine' | 'square' = 'sine') => {
+  const playBeep = (freq: number, duration: number) => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const osc = audioContextRef.current.createOscillator();
     const gain = audioContextRef.current.createGain();
-    osc.type = type;
+    osc.type = 'sine';
     osc.frequency.value = freq;
-    gain.gain.value = 0.06;
+    gain.gain.value = 0.065;
     osc.connect(gain);
     gain.connect(audioContextRef.current.destination);
     osc.start();
     setTimeout(() => osc.stop(), duration);
   };
 
-  const triggerWinConfetti = () => {
+  const triggerConfetti = () => {
     confetti({
-      particleCount: 180,
-      spread: 80,
+      particleCount: 220,
+      spread: 100,
       origin: { y: 0.6 },
-      colors: ['#0052FF', '#00F0FF', '#C724FF']
-    });
-    confetti({
-      particleCount: 80,
-      angle: 60,
-      spread: 55,
-      origin: { x: 0.1 }
+      colors: ['#0052FF', '#00F0FF', '#C724FF', '#FFFFFF']
     });
   };
 
@@ -108,14 +91,13 @@ export default function BasedDodge() {
     setGameStarted(true);
     setGameOver(false);
     setScore(0);
-    player.current = { x: 450, y: 480, size: 32, speed: 9 };
+    player.current = { x: 450, y: 480, size: 32, speed: 9.2 };
     obstacles.current = [];
     particles.current = [];
     frameCount.current = 0;
     difficulty.current = 1;
 
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    lastTimeRef.current = performance.now();
     gameLoop();
   }, []);
 
@@ -128,50 +110,40 @@ export default function BasedDodge() {
 
     if (finalScore > highScore) {
       setHighScore(finalScore);
-      triggerWinConfetti();
+      triggerConfetti();
     }
 
-    // Submit to onchain if connected and beat onchain high score
-    if (isConnected && address && finalScore > onchainHighScore && finalScore > 50) {
-      submitOnchainScore(finalScore);
-    }
-
-    playBeep(90, 600);
-    playBeep(60, 900);
-  }, [score, highScore, onchainHighScore, isConnected, address]);
-
-  const submitOnchainScore = async (newScore: number) => {
-    if (!address) return;
-    setIsSubmittingScore(true);
-    
-    try {
-      await writeContract({
-        address: CONTRACT_ADDRESS as `0x${string}`,
-        abi: HIGHSCORE_ABI,
-        functionName: 'setHighScore',
-        args: [BigInt(newScore)],
+    // Add to local leaderboard
+    if (finalScore > 150 && address) {
+      const newEntry: LeaderboardEntry = {
+        address: `${address.slice(0, 6)}...${address.slice(-4)}`,
+        score: finalScore,
+        timestamp: Date.now()
+      };
+      
+      setLeaderboard(prev => {
+        const updated = [newEntry, ...prev]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 8);
+        return updated;
       });
-      setOnchainHighScore(newScore);
-      playBeep(880, 80);
-      playBeep(1200, 120);
-    } catch (error) {
-      console.log("Score submission failed (contract not deployed yet)");
-    } finally {
-      setIsSubmittingScore(false);
     }
-  };
+
+    playBeep(85, 650);
+    playBeep(55, 950);
+  }, [score, highScore, address]);
 
   const createExplosion = (x: number, y: number) => {
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 38; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const vel = 2 + Math.random() * 6.5;
+      const vel = 2.2 + Math.random() * 7;
       particles.current.push({
         x, y,
         vx: Math.cos(angle) * vel,
-        vy: Math.sin(angle) * vel - 1.8,
-        life: 42 + Math.random() * 35,
+        vy: Math.sin(angle) * vel - 2.2,
+        life: 48 + Math.random() * 30,
         color: Math.random() > 0.5 ? '#00F0FF' : '#C724FF',
-        size: 3 + Math.random() * 5.5,
+        size: 3.5 + Math.random() * 6,
       });
     }
   };
@@ -182,32 +154,31 @@ export default function BasedDodge() {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    ctx.fillStyle = 'rgba(10, 20, 41, 0.93)';
+    ctx.fillStyle = 'rgba(10, 20, 41, 0.94)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Background grid
-    ctx.strokeStyle = 'rgba(0, 82, 255, 0.16)';
-    ctx.lineWidth = 1;
-    for (let x = 20; x < canvas.width; x += 40) {
+    // Enhanced glowing grid
+    ctx.strokeStyle = 'rgba(0, 82, 255, 0.18)';
+    for (let x = 20; x < canvas.width; x += 38) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
     }
-    for (let y = 20; y < canvas.height; y += 40) {
+    for (let y = 20; y < canvas.height; y += 38) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
 
-    // Player movement
+    // Player controls
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) player.current.x -= player.current.speed;
     if (keys.current['ArrowRight'] || keys.current['d'] || keys.current['D']) player.current.x += player.current.speed;
-    if (keys.current['ArrowUp'] || keys.current['w'] || keys.current['W']) player.current.y -= player.current.speed * 0.8;
-    if (keys.current['ArrowDown'] || keys.current['s'] || keys.current['S']) player.current.y += player.current.speed * 0.8;
+    if (keys.current['ArrowUp'] || keys.current['w'] || keys.current['W']) player.current.y -= player.current.speed * 0.82;
+    if (keys.current['ArrowDown'] || keys.current['s'] || keys.current['S']) player.current.y += player.current.speed * 0.82;
 
-    player.current.x = Math.max(35, Math.min(canvas.width - 35, player.current.x));
-    player.current.y = Math.max(90, Math.min(canvas.height - 70, player.current.y));
+    player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
+    player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
 
-    // Draw player
+    // Draw futuristic neon player
     ctx.save();
     ctx.translate(player.current.x, player.current.y);
-    ctx.shadowBlur = 40;
+    ctx.shadowBlur = 45;
     ctx.shadowColor = '#00F0FF';
 
     ctx.fillStyle = '#FFFFFF';
@@ -215,42 +186,39 @@ export default function BasedDodge() {
     ctx.lineWidth = 4;
 
     ctx.beginPath();
-    ctx.moveTo(0, -40);
-    ctx.lineTo(-28, 32);
-    ctx.lineTo(28, 32);
+    ctx.moveTo(0, -42);
+    ctx.lineTo(-29, 34);
+    ctx.lineTo(29, 34);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    ctx.shadowBlur = 20;
+    // Cockpit glow
+    ctx.shadowBlur = 25;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
-    ctx.moveTo(0, -26);
-    ctx.lineTo(-15, 22);
-    ctx.lineTo(15, 22);
-    ctx.closePath();
+    ctx.arc(0, -12, 9, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
     // Spawn obstacles
     frameCount.current++;
-    const spawnRate = Math.max(8, Math.floor(32 / difficulty.current));
-    if (frameCount.current % spawnRate === 0) {
-      const w = 34 + Math.random() * 62;
-      const h = 34 + Math.random() * 62;
+    if (frameCount.current % Math.max(7, Math.floor(29 / difficulty.current)) === 0) {
+      const w = 32 + Math.random() * 68;
+      const h = 32 + Math.random() * 68;
       obstacles.current.push({
         x: Math.random() * (canvas.width - w),
-        y: -h - 40,
+        y: -h - 50,
         width: w,
         height: h,
-        speed: 3.6 + difficulty.current * 1.3,
-        color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random()*3)],
+        speed: 3.8 + difficulty.current * 1.45,
+        color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 0.15,
+        rotSpeed: (Math.random() - 0.5) * 0.18,
       });
     }
 
-    // Update obstacles + collision
+    // Update + draw obstacles
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -259,28 +227,29 @@ export default function BasedDodge() {
       ctx.save();
       ctx.translate(obs.x + obs.width/2, obs.y + obs.height/2);
       ctx.rotate(obs.rotation);
-      ctx.shadowBlur = 32;
+      ctx.shadowBlur = 35;
       ctx.shadowColor = obs.color;
       ctx.fillStyle = obs.color;
       ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5;
       ctx.fillRect(-obs.width/2, -obs.height/2, obs.width, obs.height);
-      ctx.strokeRect(-obs.width/2-4, -obs.height/2-4, obs.width+8, obs.height+8);
+      ctx.strokeRect(-obs.width/2 - 5, -obs.height/2 - 5, obs.width + 10, obs.height + 10);
       ctx.restore();
 
-      const dx = player.current.x - (obs.x + obs.width/2);
-      const dy = player.current.y - (obs.y + obs.height/2);
-      if (Math.hypot(dx, dy) < player.current.size * 1.2 + (obs.width + obs.height)/4) {
+      // Collision
+      const dx = player.current.x - (obs.x + obs.width / 2);
+      const dy = player.current.y - (obs.y + obs.height / 2);
+      if (Math.hypot(dx, dy) < 48) {
         createExplosion(player.current.x, player.current.y);
         endGame();
         return;
       }
 
-      if (obs.y > canvas.height + 100) {
+      if (obs.y > canvas.height + 120) {
         obstacles.current.splice(i, 1);
         setScore(prev => {
-          const newScore = prev + 14;
-          if (newScore % 260 === 0) difficulty.current = Math.min(6, difficulty.current + 0.5);
+          const newScore = prev + 16;
+          if (newScore % 240 === 0) difficulty.current = Math.min(7.2, difficulty.current + 0.55);
           return newScore;
         });
       }
@@ -291,14 +260,14 @@ export default function BasedDodge() {
       const p = particles.current[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.16;
-      p.life -= 1.15;
-      p.size *= 0.96;
+      p.vy += 0.18;
+      p.life -= 1.2;
+      p.size *= 0.955;
 
       ctx.save();
-      ctx.globalAlpha = p.life / 55;
+      ctx.globalAlpha = Math.max(0.05, p.life / 52);
       ctx.fillStyle = p.color;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 18;
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
@@ -306,17 +275,31 @@ export default function BasedDodge() {
       if (p.life <= 0) particles.current.splice(i, 1);
     }
 
-    // Canvas UI
+    // HUD
     ctx.fillStyle = '#00F0FF';
-    ctx.font = 'bold 30px monospace';
-    ctx.shadowBlur = 20;
+    ctx.font = 'bold 32px monospace';
+    ctx.shadowBlur = 25;
     ctx.shadowColor = '#00F0FF';
-    ctx.fillText(`SCORE ${score.toString().padStart(6, '0')}`, 50, 72);
+    ctx.fillText(`SCORE ${score.toString().padStart(6, '0')}`, 52, 78);
 
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [score, endGame]);
 
-  // Touch handlers
+  // Controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { keys.current[e.key] = true; };
+    const handleKeyUp = (e: KeyboardEvent) => { keys.current[e.key] = false; };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, []);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!gameStarted) return;
     const touch = e.touches[0];
@@ -328,32 +311,13 @@ export default function BasedDodge() {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging.current || !gameStarted) return;
     const touch = e.touches[0];
-    const dx = (touch.clientX - touchStartX.current) * 0.72;
-    const dy = (touch.clientY - touchStartY.current) * 0.72;
-
-    player.current.x += dx;
-    player.current.y += dy;
-
+    player.current.x += (touch.clientX - touchStartX.current) * 0.78;
+    player.current.y += (touch.clientY - touchStartY.current) * 0.78;
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
   };
 
-  const handleTouchEnd = () => isDragging.current = false;
-
-  // Keyboard
-  useEffect(() => {
-    const kd = (e: KeyboardEvent) => keys.current[e.key] = true;
-    const ku = (e: KeyboardEvent) => keys.current[e.key] = false;
-
-    window.addEventListener('keydown', kd);
-    window.addEventListener('keyup', ku);
-
-    return () => {
-      window.removeEventListener('keydown', kd);
-      window.removeEventListener('keyup', ku);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, []);
+  const handleTouchEnd = () => { isDragging.current = false; };
 
   return (
     <div className="min-h-screen bg-[#0A1429] text-white overflow-hidden relative">
@@ -362,18 +326,19 @@ export default function BasedDodge() {
       <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-[#0052FF30]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center text-2xl">⚡</div>
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center text-3xl">⚡</div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tighter">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
-              <p className="text-xs text-[#00F0FF]/60">ONCHAIN HIGH SCORE • BASE</p>
+              <h1 className="text-4xl font-bold tracking-[-2px]">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 font-mono">
-            <div className="text-sm">HIGH: <span className="text-[#00F0FF] font-bold">{highScore}</span></div>
-            {isConnected && (
-              <div className="text-xs text-emerald-400">ONCHAIN: {onchainHighScore}</div>
-            )}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setShowLeaderboard(true)}
+              className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors"
+            >
+              LEADERBOARD
+            </button>
             <Wallet>
               <ConnectWallet />
               <WalletDropdown>
@@ -384,65 +349,118 @@ export default function BasedDodge() {
         </div>
       </header>
 
-      <main className="pt-24 flex items-center justify-center min-h-screen">
-        {!gameStarted && !gameOver && (
-          <div className="text-center">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <div className="text-[142px] leading-none font-black tracking-[-6px] bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
-                BASEDDODGE
-              </div>
-              <p className="mt-2 text-2xl text-[#E6F0FF]">Endless Dodger • Onchain High Score</p>
-            </motion.div>
-
-            <motion.button
-              onClick={startGame}
-              whileHover={{ scale: 1.08 }}
-              className="mt-16 px-24 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF] shadow-[0_0_90px_#00F0FF]"
+      <main className="pt-28 flex items-center justify-center min-h-screen">
+        <AnimatePresence mode="wait">
+          {!gameStarted && !gameOver && (
+            <motion.div 
+              key="menu"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center"
             >
-              START GAME
-            </motion.button>
-          </div>
-        )}
+              <div className="mb-8">
+                <div className="text-[168px] font-black tracking-[-8px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
+                  BASED DODGE
+                </div>
+                <p className="text-2xl text-[#00F0FF] tracking-widest">ENDLESS NEON SURVIVAL</p>
+              </div>
 
-        {(gameStarted || gameOver) && (
-          <div 
-            className="relative select-none"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            <canvas
-              ref={canvasRef}
-              width={920}
-              height={640}
-              className="rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_110px_#0052FF] bg-black"
-            />
-
-            {gameOver && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl"
+              <motion.button
+                onClick={startGame}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="mt-8 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] via-[#0066FF] to-[#00F0FF] shadow-[0_0_100px_#00F0FF] hover:shadow-[0_0_140px_#00F0FF] transition-all"
               >
-                <div className="text-8xl mb-6">💥</div>
-                <div className="text-6xl font-bold text-[#FF2D55]">CRASHED</div>
-                <div className="text-4xl my-8 font-mono">SCORE: <span className="text-[#00F0FF]">{score}</span></div>
-                
-                <button 
-                  onClick={startGame}
-                  disabled={isSubmittingScore}
-                  className="px-20 py-7 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-3xl font-bold disabled:opacity-70"
+                LAUNCH INTO BASE
+              </motion.button>
+            </motion.div>
+          )}
+
+          {(gameStarted || gameOver) && (
+            <div 
+              className="relative"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <canvas
+                ref={canvasRef}
+                width={920}
+                height={640}
+                className="rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_120px_#0052FF] bg-black"
+              />
+
+              {gameOver && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 rounded-3xl"
                 >
-                  {isSubmittingScore ? "SAVING TO BASE..." : "PLAY AGAIN"}
-                </button>
-              </motion.div>
-            )}
-          </div>
-        )}
+                  <div className="text-8xl mb-4">💥</div>
+                  <div className="text-6xl font-bold text-[#FF3366] tracking-wider">GAME OVER</div>
+                  <div className="text-5xl font-mono my-10">SCORE <span className="text-[#00F0FF]">{score}</span></div>
+                  
+                  <button 
+                    onClick={startGame}
+                    className="px-20 py-6 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-3xl font-bold hover:brightness-110 transition"
+                  >
+                    TRY AGAIN
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          )}
+        </AnimatePresence>
       </main>
 
+      {/* Leaderboard Modal */}
+      <AnimatePresence>
+        {showLeaderboard && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+            <motion.div 
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
+              className="glass w-full max-w-lg rounded-3xl p-10 border border-[#0052FF60]"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-4xl font-bold text-[#00F0FF]">LEADERBOARD</h2>
+                <button onClick={() => setShowLeaderboard(false)} className="text-4xl text-[#00F0FF]/60 hover:text-white">×</button>
+              </div>
+
+              <div className="space-y-4">
+                {leaderboard.map((entry, index) => (
+                  <div key={index} className="flex items-center justify-between bg-[#001233]/60 px-6 py-4 rounded-2xl border border-[#0052FF30]">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-mono text-sm text-[#00F0FF]">{entry.address}</div>
+                        <div className="text-xs text-gray-500">ON BASE</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-white">{entry.score}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setShowLeaderboard(false)}
+                className="mt-10 w-full py-4 border border-[#0052FF50] hover:bg-[#0052FF10] rounded-2xl transition"
+              >
+                CLOSE
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ARROWS / WASD • DRAG TO MOVE • HIGH SCORES SAVED ON BASE
+        ←→↑↓ OR WASD • DRAG ON MOBILE • BUILT ON BASE
       </footer>
     </div>
   );
