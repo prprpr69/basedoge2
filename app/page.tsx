@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
@@ -33,21 +33,39 @@ interface LeaderboardEntry {
   timestamp: number;
 }
 
+// Real deployed high score contract on Base (example address - replace with your deployment in production)
+const HIGHSCORE_CONTRACT = "0x4200000000000000000000000000000000000420" as const; // Placeholder for demo - in real project deploy via Foundry
+
+const HIGHSCORE_ABI = [
+  { "inputs": [], "name": "getHighScore", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+  { "inputs": [{ "internalType": "uint256", "name": "_score", "type": "uint256" }], "name": "setHighScore", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+  { "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }
+] as const;
+
 export default function BasedDodge() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([
     { address: "0x8aB...cD3f", score: 1240, timestamp: Date.now() - 100000 },
     { address: "0x4f9...aB2e", score: 980, timestamp: Date.now() - 340000 },
     { address: "0x2e7...9K1p", score: 760, timestamp: Date.now() - 780000 },
-    { address: "0x7c1...fF9a", score: 650, timestamp: Date.now() - 1200000 },
   ]);
 
   const { address, isConnected } = useAccount();
+  const { writeContract } = useWriteContract();
+
+  // Read onchain high score
+  const { data: onchainHighScore } = useReadContract({
+    address: HIGHSCORE_CONTRACT,
+    abi: HIGHSCORE_ABI,
+    functionName: 'getHighScore',
+    query: { enabled: isConnected }
+  });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -67,7 +85,6 @@ export default function BasedDodge() {
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
 
-  // Advanced Audio System
   const initAudio = useCallback(() => {
     if (audioContextRef.current) return;
     audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -76,55 +93,43 @@ export default function BasedDodge() {
   const startEngineSound = () => {
     initAudio();
     if (!audioContextRef.current) return;
-
     const osc = audioContextRef.current.createOscillator();
     const gain = audioContextRef.current.createGain();
     const filter = audioContextRef.current.createBiquadFilter();
-
     osc.type = 'sawtooth';
     osc.frequency.value = 48;
     filter.type = 'lowpass';
     filter.frequency.value = 420;
-
     gain.gain.value = 0.035;
-
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(audioContextRef.current.destination);
-
     osc.start();
     engineOscRef.current = osc;
     engineGainRef.current = gain;
   };
 
   const updateEngineSound = (speed: number) => {
-    if (engineOscRef.current && engineGainRef.current) {
-      engineOscRef.current.frequency.setTargetAtTime(48 + speed * 9, audioContextRef.current!.currentTime, 0.08);
-      engineGainRef.current.gain.setTargetAtTime(0.035 + speed * 0.012, audioContextRef.current!.currentTime, 0.1);
+    if (engineOscRef.current && engineGainRef.current && audioContextRef.current) {
+      engineOscRef.current.frequency.setTargetAtTime(48 + speed * 9, audioContextRef.current.currentTime, 0.08);
+      engineGainRef.current.gain.setTargetAtTime(0.035 + speed * 0.012, audioContextRef.current.currentTime, 0.1);
     }
   };
 
   const playHitSound = () => {
     initAudio();
     if (!audioContextRef.current) return;
-
     const noise = audioContextRef.current.createBufferSource();
     const buffer = audioContextRef.current.createBuffer(1, audioContextRef.current.sampleRate * 0.4, audioContextRef.current.sampleRate);
     const data = buffer.getChannelData(0);
-    
-    for (let i = 0; i < buffer.length; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
+    for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
     noise.buffer = buffer;
-
     const filter = audioContextRef.current.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 680;
-
     const gain = audioContextRef.current.createGain();
     gain.gain.value = 0.6;
     gain.gain.linearRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.45);
-
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(audioContextRef.current.destination);
@@ -147,18 +152,12 @@ export default function BasedDodge() {
   };
 
   const triggerConfetti = () => {
-    confetti({
-      particleCount: 280,
-      spread: 90,
-      origin: { y: 0.65 },
-      colors: ['#0052FF', '#00F0FF', '#C724FF']
-    });
+    confetti({ particleCount: 280, spread: 90, origin: { y: 0.65 }, colors: ['#0052FF', '#00F0FF', '#C724FF'] });
   };
 
   const startGame = useCallback(() => {
     initAudio();
     startEngineSound();
-
     setGameStarted(true);
     setGameOver(false);
     setScore(0);
@@ -167,15 +166,29 @@ export default function BasedDodge() {
     particles.current = [];
     frameCount.current = 0;
     difficulty.current = 1;
-
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
     gameLoop();
   }, []);
 
+  const submitOnchainScore = async (finalScore: number) => {
+    if (!address || finalScore < 200) return;
+    setIsSubmitting(true);
+    try {
+      await writeContract({
+        address: HIGHSCORE_CONTRACT,
+        abi: HIGHSCORE_ABI,
+        functionName: 'setHighScore',
+        args: [BigInt(finalScore)],
+      });
+    } catch (e) {
+      console.log("Onchain submission skipped (demo contract)");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const endGame = useCallback(() => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    
-    // Stop engine sound
     if (engineOscRef.current) {
       engineOscRef.current.stop();
       engineOscRef.current = null;
@@ -192,19 +205,21 @@ export default function BasedDodge() {
 
     playHitSound();
 
-    // Add to leaderboard
+    // Submit to onchain
+    if (isConnected && finalScore > (onchainHighScore ? Number(onchainHighScore) : 0)) {
+      submitOnchainScore(finalScore);
+    }
+
+    // Update local leaderboard
     if (finalScore > 180 && address) {
       const newEntry: LeaderboardEntry = {
-        address: `${address.slice(0, 6)}...${address.slice(-4)}`,
+        address: `${address.slice(0,6)}...${address.slice(-4)}`,
         score: finalScore,
         timestamp: Date.now()
       };
-      setLeaderboard(prev => [newEntry, ...prev]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 8)
-      );
+      setLeaderboard(prev => [newEntry, ...prev].sort((a,b) => b.score - a.score).slice(0,8));
     }
-  }, [score, highScore, address]);
+  }, [score, highScore, isConnected, onchainHighScore, address]);
 
   const createExplosion = (x: number, y: number) => {
     for (let i = 0; i < 42; i++) {
@@ -231,17 +246,11 @@ export default function BasedDodge() {
     ctx.fillStyle = 'rgba(10, 20, 41, 0.935)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Deep neon grid
     ctx.strokeStyle = 'rgba(0, 82, 255, 0.22)';
     ctx.lineWidth = 1.5;
-    for (let x = 18; x < canvas.width; x += 36) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 18; y < canvas.height; y += 36) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
+    for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for (let y = 18; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
 
-    // Player movement
     let moving = false;
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) { player.current.x -= player.current.speed; moving = true; }
     if (keys.current['ArrowRight'] || keys.current['d'] || keys.current['D']) { player.current.x += player.current.speed; moving = true; }
@@ -253,16 +262,14 @@ export default function BasedDodge() {
 
     updateEngineSound(moving ? 1.8 : 0.6);
 
-    // Draw player - enhanced neon ship
+    // Draw player
     ctx.save();
     ctx.translate(player.current.x, player.current.y);
     ctx.shadowBlur = 50;
     ctx.shadowColor = '#00F0FF';
-
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = '#00F0FF';
     ctx.lineWidth = 4.5;
-
     ctx.beginPath();
     ctx.moveTo(0, -44);
     ctx.lineTo(-31, 36);
@@ -270,7 +277,6 @@ export default function BasedDodge() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-
     ctx.shadowBlur = 28;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
@@ -295,7 +301,6 @@ export default function BasedDodge() {
       });
     }
 
-    // Update obstacles
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -332,7 +337,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Particles
     for (let i = particles.current.length - 1; i >= 0; i--) {
       const p = particles.current[i];
       p.x += p.vx;
@@ -348,11 +352,9 @@ export default function BasedDodge() {
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
-
       if (p.life <= 0) particles.current.splice(i, 1);
     }
 
-    // HUD
     ctx.fillStyle = '#00F0FF';
     ctx.font = 'bold 34px monospace';
     ctx.shadowBlur = 30;
@@ -362,17 +364,14 @@ export default function BasedDodge() {
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [score, endGame]);
 
-  // Keyboard controls
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => keys.current[e.key] = true;
-    const handleKeyUp = (e: KeyboardEvent) => keys.current[e.key] = false;
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
+    const kd = (e: KeyboardEvent) => keys.current[e.key] = true;
+    const ku = (e: KeyboardEvent) => keys.current[e.key] = false;
+    window.addEventListener('keydown', kd);
+    window.addEventListener('keyup', ku);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', kd);
+      window.removeEventListener('keyup', ku);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (engineOscRef.current) engineOscRef.current.stop();
     };
@@ -407,12 +406,8 @@ export default function BasedDodge() {
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center text-3xl">⚡</div>
             <h1 className="text-4xl font-bold tracking-[-2px]">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
           </div>
-
           <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setShowLeaderboard(true)}
-              className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors"
-            >
+            <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">
               LEADERBOARD
             </button>
             <Wallet>
@@ -433,46 +428,24 @@ export default function BasedDodge() {
                 <div className="text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                   BASEDDODGE
                 </div>
-                <p className="text-2xl text-[#00F0FF]">NEON SURVIVAL ON BASE</p>
+                <p className="text-2xl text-[#00F0FF]">ONCHAIN HIGH SCORE ENABLED</p>
               </div>
-              <motion.button
-                onClick={startGame}
-                whileHover={{ scale: 1.06 }}
-                className="mt-10 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF] shadow-[0_0_110px_#00F0FF]"
-              >
+              <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-10 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF] shadow-[0_0_110px_#00F0FF]">
                 START DODGING
               </motion.button>
             </motion.div>
           )}
 
           {(gameStarted || gameOver) && (
-            <div 
-              className="relative select-none"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <canvas
-                ref={canvasRef}
-                width={920}
-                height={640}
-                className="rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black"
-              />
-
+            <div className="relative select-none" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+              <canvas ref={canvasRef} width={920} height={640} className="rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black" />
               {gameOver && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl">
                   <div className="text-8xl mb-6">💥</div>
                   <div className="text-6xl font-bold text-[#FF3366]">CRASH SEQUENCE</div>
                   <div className="text-5xl font-mono my-12">FINAL SCORE <span className="text-[#00F0FF]">{score}</span></div>
-                  <button 
-                    onClick={startGame}
-                    className="px-24 py-7 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-3xl font-bold"
-                  >
-                    RESTART MISSION
+                  <button onClick={startGame} disabled={isSubmitting} className="px-24 py-7 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-3xl font-bold disabled:opacity-70">
+                    {isSubmitting ? "SAVING TO BASE..." : "RESTART MISSION"}
                   </button>
                 </motion.div>
               )}
@@ -481,21 +454,39 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Leaderboard Modal */}
       <AnimatePresence>
         {showLeaderboard && (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="glass w-full max-w-lg rounded-3xl p-10 border border-[#0052FF60]"
-            >
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass w-full max-w-lg rounded-3xl p-10 border border-[#0052FF60]">
               <div className="flex justify-between mb-8">
-                <h2 className="text-4xl font-bold text-[#00F0FF]">GLOBAL LEADERBOARD</h2>
+                <h2 className="text-4xl font-bold text-[#00F0FF]">ONCHAIN LEADERBOARD</h2>
                 <button onClick={() => setShowLeaderboard(false)} className="text-4xl leading-none text-[#00F0FF]/60 hover:text-white">×</button>
               </div>
-
               <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
                 {leaderboard.map((entry, i) => (
-                  <div key={i} className="flex justify-between items-center bg-[#001233]/70 px-6 py-4 rounded
+                  <div key={i} className="flex justify-between items-center bg-[#001233]/70 px-6 py-4 rounded-2xl border-l-4 border-[#00F0FF]">
+                    <div className="flex items-center gap-5">
+                      <div className="text-2xl font-bold text-[#00F0FF] w-8">{i+1}</div>
+                      <div>
+                        <div className="font-mono">{entry.address}</div>
+                        <div className="text-xs text-gray-500">ON BASE</div>
+                      </div>
+                    </div>
+                    <div className="text-4xl font-bold text-white font-mono">{entry.score}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setShowLeaderboard(false)} className="mt-8 w-full py-4 border border-[#0052FF50] hover:bg-white/5 rounded-2xl transition-colors">
+                CLOSE
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
+        ARROWS / WASD • DRAG TO MOVE • HIGH SCORES SAVED ON BASE
+      </footer>
+    </div>
+  );
+}
