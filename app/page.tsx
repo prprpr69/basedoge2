@@ -1,4 +1,4 @@
-'use client';
+'use client'; 
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
