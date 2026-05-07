@@ -40,6 +40,14 @@ interface PowerUp {
   life: number;
 }
 
+interface Achievement {
+  id: string;
+  name: string;
+  desc: string;
+  unlocked: boolean;
+  scoreRequired: number;
+}
+
 const HIGHSCORE_CONTRACT = "0x4200000000000000000000000000000000000420" as const;
 
 const HIGHSCORE_ABI = [
@@ -53,10 +61,17 @@ export default function BasedDodge() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [shieldActive, setShieldActive] = useState(false);
   const [slowMoActive, setSlowMoActive] = useState(false);
+
+  const [achievements, setAchievements] = useState<Achievement[]>([
+    { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
+    { id: 'neon-god', name: 'NEON GOD', desc: 'Reach 1000 points', unlocked: false, scoreRequired: 1000 },
+    { id: 'base-legend', name: 'BASE LEGEND', desc: 'Reach 2000 points', unlocked: false, scoreRequired: 2000 },
+  ]);
 
   const [leaderboard, setLeaderboard] = useState([
     { address: "0x8aB...cD3f", score: 1240 },
@@ -93,6 +108,37 @@ export default function BasedDodge() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
+
+  // Load saved high score
+  useEffect(() => {
+    const savedHigh = localStorage.getItem('basedDodgeHighScore');
+    if (savedHigh) setHighScore(parseInt(savedHigh));
+
+    const savedAchievements = localStorage.getItem('basedDodgeAchievements');
+    if (savedAchievements) {
+      setAchievements(JSON.parse(savedAchievements));
+    }
+  }, []);
+
+  const saveHighScore = (newScore: number) => {
+    if (newScore > highScore) {
+      localStorage.setItem('basedDodgeHighScore', newScore.toString());
+      setHighScore(newScore);
+    }
+  };
+
+  const unlockAchievement = (id: string) => {
+    setAchievements(prev => {
+      const updated = prev.map(a => 
+        a.id === id && !a.unlocked 
+          ? { ...a, unlocked: true } 
+          : a
+      );
+      localStorage.setItem('basedDodgeAchievements', JSON.stringify(updated));
+      return updated;
+    });
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.7 } });
+  };
 
   const initAudio = useCallback(() => {
     if (audioContextRef.current) return;
@@ -215,10 +261,18 @@ export default function BasedDodge() {
     setShieldActive(false);
     setSlowMoActive(false);
 
+    saveHighScore(finalScore);
+
     if (finalScore > highScore) {
-      setHighScore(finalScore);
       triggerConfetti();
     }
+
+    // Check achievements
+    achievements.forEach(ach => {
+      if (!ach.unlocked && finalScore >= ach.scoreRequired) {
+        unlockAchievement(ach.id);
+      }
+    });
 
     playHitSound();
 
@@ -230,7 +284,7 @@ export default function BasedDodge() {
       const newEntry = { address: `${address.slice(0,6)}...${address.slice(-4)}`, score: finalScore };
       setLeaderboard(prev => [newEntry, ...prev].sort((a,b) => b.score - a.score).slice(0,8));
     }
-  }, [score, highScore, isConnected, onchainHighScore, address]);
+  }, [score, highScore, isConnected, onchainHighScore, address, achievements]);
 
   const createExplosion = (x: number, y: number, intense = false) => {
     const count = intense ? 55 : 42;
@@ -276,13 +330,11 @@ export default function BasedDodge() {
     ctx.fillStyle = 'rgba(10, 20, 41, 0.92)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grid
     ctx.strokeStyle = 'rgba(0, 82, 255, 0.25)';
     ctx.lineWidth = 1.5;
     for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
     for (let y = 18; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
 
-    // Player movement
     let moving = false;
     const currentSpeed = player.current.speed * (slowMoActive ? 1.3 : 1);
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) { player.current.x -= currentSpeed; moving = true; }
@@ -295,15 +347,11 @@ export default function BasedDodge() {
 
     updateEngineSound(moving ? 1.8 : 0.6);
 
-    // Player trail
     trails.current.push({ x: player.current.x, y: player.current.y + 12, life: 18 });
     for (let i = trails.current.length - 1; i >= 0; i--) {
       const t = trails.current[i];
       t.life -= 1;
-      if (t.life <= 0) {
-        trails.current.splice(i, 1);
-        continue;
-      }
+      if (t.life <= 0) { trails.current.splice(i, 1); continue; }
       ctx.save();
       ctx.globalAlpha = t.life / 22;
       ctx.fillStyle = '#00F0FF';
@@ -311,12 +359,10 @@ export default function BasedDodge() {
       ctx.restore();
     }
 
-    // Draw Player
     ctx.save();
     ctx.translate(player.current.x + (shake.current * (Math.random() - 0.5)), player.current.y);
     ctx.shadowBlur = 55;
     ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
-
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
     ctx.lineWidth = 4.5;
@@ -327,7 +373,6 @@ export default function BasedDodge() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-
     ctx.shadowBlur = 30;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
@@ -335,7 +380,6 @@ export default function BasedDodge() {
     ctx.fill();
     ctx.restore();
 
-    // Spawn obstacles & power-ups
     frameCount.current++;
     if (frameCount.current % Math.max(6, Math.floor(26 / difficulty.current)) === 0) {
       const w = 34 + Math.random() * 72;
@@ -354,7 +398,6 @@ export default function BasedDodge() {
 
     spawnPowerUp();
 
-    // Update obstacles
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -377,7 +420,7 @@ export default function BasedDodge() {
 
       if (Math.hypot(dx, dy) < 52) {
         if (shieldActive) {
-          shieldActive = false;
+          setShieldActive(false);
           createExplosion(obs.x + obs.width/2, obs.y + obs.height/2, true);
           obstacles.current.splice(i, 1);
           continue;
@@ -394,13 +437,11 @@ export default function BasedDodge() {
         setScore(prev => {
           const newScore = prev + 18;
           if (newScore % 200 === 0) difficulty.current = Math.min(9, difficulty.current + 0.65);
-          if (newScore % 70 === 0) playScoreTick();
           return newScore;
         });
       }
     }
 
-    // Power-ups
     for (let i = powerUps.current.length - 1; i >= 0; i--) {
       const pu = powerUps.current[i];
       pu.y += 3.2 * slowMoFactor;
@@ -415,11 +456,9 @@ export default function BasedDodge() {
       ctx.fill();
       ctx.restore();
 
-      // Collision with player
       if (Math.hypot(player.current.x - pu.x, player.current.y - pu.y) < 48) {
-        if (pu.type === 'shield') {
-          setShieldActive(true);
-        } else {
+        if (pu.type === 'shield') setShieldActive(true);
+        else {
           setSlowMoActive(true);
           setTimeout(() => setSlowMoActive(false), 6500);
         }
@@ -428,12 +467,9 @@ export default function BasedDodge() {
         continue;
       }
 
-      if (pu.life <= 0 || pu.y > canvas.height + 50) {
-        powerUps.current.splice(i, 1);
-      }
+      if (pu.life <= 0 || pu.y > canvas.height + 50) powerUps.current.splice(i, 1);
     }
 
-    // Particles
     for (let i = particles.current.length - 1; i >= 0; i--) {
       const p = particles.current[i];
       p.x += p.vx;
@@ -449,11 +485,9 @@ export default function BasedDodge() {
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
-
       if (p.life <= 0) particles.current.splice(i, 1);
     }
 
-    // Score HUD
     ctx.fillStyle = '#00F0FF';
     ctx.font = 'bold 34px monospace';
     ctx.shadowBlur = 30;
@@ -523,6 +557,7 @@ export default function BasedDodge() {
             <h1 className="text-4xl font-bold tracking-[-2px]">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
           </div>
           <div className="flex items-center gap-4">
+            <button onClick={() => setShowAchievements(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">ACHIEVEMENTS</button>
             <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">
               LEADERBOARD
             </button>
@@ -543,7 +578,7 @@ export default function BasedDodge() {
               <div className="text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">NEON TRAILS • POWER-UPS • ON BASE</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">ACHIEVEMENTS • PERSISTENT PROGRESS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -569,6 +604,33 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
+      {/* Achievements Modal */}
+      <AnimatePresence>
+        {showAchievements && (
+          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass w-full max-w-lg rounded-3xl p-10 border border-[#0052FF60]">
+              <h2 className="text-4xl font-bold text-[#00F0FF] mb-8">ACHIEVEMENTS</h2>
+              <div className="space-y-4">
+                {achievements.map((ach, i) => (
+                  <div key={i} className={`p-5 rounded-2xl flex gap-5 items-center border ${ach.unlocked ? 'border-[#00F0FF] bg-[#001233]' : 'border-[#0052FF30] opacity-60'}`}>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-3xl ${ach.unlocked ? 'bg-[#00F0FF] text-black' : 'bg-[#112244]'}`}>
+                      🏆
+                    </div>
+                    <div>
+                      <div className="font-bold text-lg">{ach.name}</div>
+                      <div className="text-sm text-gray-400">{ach.desc}</div>
+                    </div>
+                    {ach.unlocked && <div className="ml-auto text-emerald-400 text-xl">✓</div>}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setShowAchievements(false)} className="mt-8 w-full py-4 border border-[#0052FF50] hover:bg-white/5 rounded-2xl">CLOSE</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Leaderboard Modal */}
       <AnimatePresence>
         {showLeaderboard && (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4">
@@ -592,7 +654,7 @@ export default function BasedDodge() {
       </AnimatePresence>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        TRAILS • SHIELD • SLOW-MO • P TO PAUSE • ON BASE
+        ACHIEVEMENTS UNLOCKED • LOCAL PERSISTENCE • ON BASE
       </footer>
     </div>
   );
