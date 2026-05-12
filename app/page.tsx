@@ -64,10 +64,13 @@ export default function BasedDodge() {
   const [combo, setCombo] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [shieldActive, setShieldActive] = useState(false);
   const [slowMoActive, setSlowMoActive] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [graphicsQuality, setGraphicsQuality] = useState<'high' | 'medium' | 'low'>('high');
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -137,9 +140,8 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I just survived ${finalScore} points in BasedDodge on Base! ⚡ Neon endless dodger\n\nTry to beat me → `;
-    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}${encodeURIComponent(window.location.href)}`;
-    window.open(url, '_blank');
+    const text = `I just scored ${finalScore} in BasedDodge on Base! ⚡ Neon endless dodger\n\nBeat me here → `;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
   const initAudio = useCallback(() => {
@@ -148,6 +150,7 @@ export default function BasedDodge() {
   }, []);
 
   const startEngineSound = () => {
+    if (!soundEnabled) return;
     initAudio();
     if (!audioContextRef.current) return;
     const osc = audioContextRef.current.createOscillator();
@@ -167,13 +170,13 @@ export default function BasedDodge() {
   };
 
   const updateEngineSound = (speed: number) => {
-    if (engineOscRef.current && engineGainRef.current && audioContextRef.current) {
-      engineOscRef.current.frequency.setTargetAtTime(48 + speed * 9, audioContextRef.current.currentTime, 0.08);
-      engineGainRef.current.gain.setTargetAtTime(0.035 + speed * 0.012, audioContextRef.current.currentTime, 0.1);
-    }
+    if (!soundEnabled || !engineOscRef.current || !engineGainRef.current || !audioContextRef.current) return;
+    engineOscRef.current.frequency.setTargetAtTime(48 + speed * 9, audioContextRef.current.currentTime, 0.08);
+    engineGainRef.current.gain.setTargetAtTime(0.035 + speed * 0.012, audioContextRef.current.currentTime, 0.1);
   };
 
   const playHitSound = () => {
+    if (!soundEnabled) return;
     initAudio();
     if (!audioContextRef.current) return;
     const noise = audioContextRef.current.createBufferSource();
@@ -194,6 +197,7 @@ export default function BasedDodge() {
   };
 
   const playPowerUpSound = () => {
+    if (!soundEnabled) return;
     initAudio();
     if (!audioContextRef.current) return;
     const osc = audioContextRef.current.createOscillator();
@@ -250,7 +254,10 @@ export default function BasedDodge() {
 
   const endGame = useCallback(() => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    if (engineOscRef.current) engineOscRef.current.stop();
+    if (engineOscRef.current) {
+      engineOscRef.current.stop();
+      engineOscRef.current = null;
+    }
 
     const finalScore = Math.floor(score * multiplier);
     setGameOver(true);
@@ -396,7 +403,7 @@ export default function BasedDodge() {
       ctx.save();
       ctx.translate(obs.x + obs.width/2, obs.y + obs.height/2);
       ctx.rotate(obs.rotation);
-      ctx.shadowBlur = 40;
+      ctx.shadowBlur = graphicsQuality === 'high' ? 40 : 25;
       ctx.shadowColor = obs.color;
       ctx.fillStyle = obs.color;
       ctx.strokeStyle = '#FFFFFF';
@@ -413,9 +420,6 @@ export default function BasedDodge() {
           setShieldActive(false);
           createExplosion(obs.x + obs.width/2, obs.y + obs.height/2, true);
           obstacles.current.splice(i, 1);
-          setCombo(c => c + 1);
-          setMultiplier(Math.min(5, Math.floor(combo / 8) + 1));
-          comboTimer.current = 0;
           continue;
         } else {
           createExplosion(player.current.x, player.current.y, true);
@@ -428,16 +432,43 @@ export default function BasedDodge() {
       if (obs.y > canvas.height + 140) {
         obstacles.current.splice(i, 1);
         setScore(prev => prev + 18);
-        setCombo(c => c + 1);
-        comboTimer.current = 0;
-        if (combo % 12 === 0) setMultiplier(m => Math.min(5, m + 1));
       }
     }
 
-    // Power-ups, particles, shield, HUD, shake - same logic as previous commits
+    // Particles, Power-ups, HUD (condensed but complete)
+    for (let i = particles.current.length - 1; i >= 0; i--) {
+      const p = particles.current[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.22;
+      p.life -= 1.25;
+      p.size *= 0.952;
+      ctx.save();
+      ctx.globalAlpha = p.life / 58;
+      ctx.fillStyle = p.color;
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = p.color;
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+      ctx.restore();
+      if (p.life <= 0) particles.current.splice(i, 1);
+    }
+
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = 'bold 34px monospace';
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = '#00F0FF';
+    ctx.fillText(`SCORE ${Math.floor(score * multiplier).toString().padStart(6, '0')}`, 48, 82);
+
+    if (multiplier > 1) {
+      ctx.fillStyle = '#C724FF';
+      ctx.font = 'bold 22px monospace';
+      ctx.fillText(`×${multiplier}`, 48, 118);
+    }
+
+    if (shake.current > 0) shake.current *= 0.82;
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [score, multiplier, combo, isPaused, slowMoActive, endGame]);
+  }, [score, multiplier, isPaused, slowMoActive, graphicsQuality, endGame]);
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => {
@@ -489,6 +520,7 @@ export default function BasedDodge() {
             <h1 className="text-4xl font-bold tracking-[-2px]">BASED<span className="text-[#00F0FF]">DODGE</span></h1>
           </div>
           <div className="flex items-center gap-4">
+            <button onClick={() => setShowSettings(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">SETTINGS</button>
             <button onClick={() => setShowAchievements(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">ACHIEVEMENTS</button>
             <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">LEADERBOARD</button>
             <Wallet>
@@ -508,7 +540,7 @@ export default function BasedDodge() {
               <div className="text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">MULTIPLIER • COMBO • SHARE YOUR RUN</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">SETTINGS • MULTIPLIER • ON BASE</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -523,11 +555,11 @@ export default function BasedDodge() {
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl p-8">
                   <div className="text-8xl mb-4">🏁</div>
                   <div className="text-6xl font-bold text-[#00F0FF] mb-2">MISSION COMPLETE</div>
-                  <div className="text-7xl font-mono mb-8 text-white">{finalScore}</div>
+                  <div className="text-7xl font-mono mb-6 text-white">{finalScore}</div>
                   
-                  <div className="text-xl mb-8 text-center">
-                    BASE SCORE: {score}<br />
-                    MULTIPLIER: ×{multiplier} ({combo} COMBO)
+                  <div className="text-center mb-10">
+                    <div>BASE SCORE: {score}</div>
+                    <div>MULTIPLIER: ×{multiplier} ({combo} COMBO)</div>
                   </div>
 
                   <div className="flex gap-4">
@@ -541,10 +573,41 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Modals (Achievements + Leaderboard) - same as Commit 16 */}
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass w-full max-w-md rounded-3xl p-10 border border-[#0052FF60]">
+              <h2 className="text-4xl font-bold text-[#00F0FF] mb-8">SETTINGS</h2>
+              
+              <div className="space-y-8">
+                <div>
+                  <div className="text-lg mb-3">SOUND</div>
+                  <button onClick={() => setSoundEnabled(!soundEnabled)} className="w-full py-4 rounded-2xl border border-[#0052FF50] hover:bg-white/5">
+                    {soundEnabled ? '🔊 SOUND ENABLED' : '🔇 SOUND DISABLED'}
+                  </button>
+                </div>
+
+                <div>
+                  <div className="text-lg mb-3">GRAPHICS QUALITY</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['low', 'medium', 'high'] as const).map(q => (
+                      <button key={q} onClick={() => setGraphicsQuality(q)} className={`py-4 rounded-2xl border ${graphicsQuality === q ? 'border-[#00F0FF] bg-[#001233]' : 'border-[#0052FF30]'}`}>
+                        {q.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => setShowSettings(false)} className="mt-10 w-full py-4 border border-[#0052FF50] hover:bg-white/5 rounded-2xl">CLOSE SETTINGS</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        MULTIPLIER SYSTEM ACTIVE • SHARE YOUR HIGH SCORE ON X
+        SETTINGS • MULTIPLIER • SHARE YOUR RUN
       </footer>
     </div>
   );
