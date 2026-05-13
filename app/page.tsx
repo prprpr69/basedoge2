@@ -116,15 +116,12 @@ export default function BasedDodge() {
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
 
-  // Dynamic canvas scaling
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const maxWidth = Math.min(920, window.innerWidth - 40);
-    canvas.style.width = `${maxWidth}px`;
-    canvas.style.height = `${maxWidth * (640/920)}px`;
+    if (!canvas) return;
+    const maxW = Math.min(920, window.innerWidth - 40);
+    canvas.style.width = `${maxW}px`;
+    canvas.style.height = `${Math.floor(maxW * (640 / 920))}px`;
   }, []);
 
   useEffect(() => {
@@ -158,8 +155,8 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I just scored ${finalScore} in BasedDodge on Base! ⚡ Neon endless dodger\n\nBeat me → `;
-    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}${encodeURIComponent(window.location.href)}`, '_blank');
+    const text = `I just scored ${finalScore} in BasedDodge on Base ⚡ Endless neon dodger. Can you beat me?`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
   const initAudio = useCallback(() => {
@@ -410,8 +407,6 @@ export default function BasedDodge() {
 
     spawnPowerUp();
 
-    // Obstacles, Power-ups, Particles, Collision logic (same as previous high-quality version)
-
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -452,7 +447,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Particles
     for (let i = particles.current.length - 1; i >= 0; i--) {
       const p = particles.current[i];
       p.x += p.vx;
@@ -557,7 +551,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">FULLY RESPONSIVE • MOBILE OPTIMIZED</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">PRODUCTION READY • DEPLOY ON VERCEL</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -589,10 +583,8 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Settings, Achievements, Leaderboard modals remain from previous commit */}
-
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        RESPONSIVE CANVAS • OPTIMIZED FOR MOBILE • BUILT ON BASE
+        READY FOR VERCEL DEPLOY • BASE LAYER 2
       </footer>
     </div>
   );
