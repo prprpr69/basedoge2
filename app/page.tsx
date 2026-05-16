@@ -160,7 +160,7 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I just scored ${finalScore} in BasedDodge on Base ⚡ Neon endless survival at its finest!`;
+    const text = `I just scored ${finalScore} in BasedDodge on Base ⚡ Pure neon survival!`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
@@ -174,18 +174,15 @@ export default function BasedDodge() {
     const osc = audioContextRef.current.createOscillator();
     const gain = audioContextRef.current.createGain();
     const filter = audioContextRef.current.createBiquadFilter();
-    
     osc.type = 'triangle';
     osc.frequency.value = 62;
     filter.type = 'lowpass';
     filter.frequency.value = 280;
     gain.gain.value = 0.045;
-
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(audioContextRef.current.destination);
     osc.start();
-    
     musicOscRef.current = osc;
     musicGainRef.current = gain;
   };
@@ -197,75 +194,9 @@ export default function BasedDodge() {
     }
   };
 
-  const startEngineSound = () => {
-    if (!soundEnabled) return;
-    initAudio();
-    if (!audioContextRef.current) return;
-    const osc = audioContextRef.current.createOscillator();
-    const gain = audioContextRef.current.createGain();
-    const filter = audioContextRef.current.createBiquadFilter();
-    osc.type = 'sawtooth';
-    osc.frequency.value = 48;
-    filter.type = 'lowpass';
-    filter.frequency.value = 420;
-    gain.gain.value = 0.035;
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioContextRef.current.destination);
-    osc.start();
-    engineOscRef.current = osc;
-    // engineGainRef.current = gain;
-  };
-
-  const updateEngineSound = (speed: number) => {
-    if (!soundEnabled || !engineOscRef.current) return;
-    // Simplified for this commit
-  };
-
-  const playHitSound = () => {
-    if (!soundEnabled) return;
-    initAudio();
-    if (!audioContextRef.current) return;
-    const noise = audioContextRef.current.createBufferSource();
-    const buffer = audioContextRef.current.createBuffer(1, audioContextRef.current.sampleRate * 0.4, audioContextRef.current.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
-    noise.buffer = buffer;
-    const filter = audioContextRef.current.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 680;
-    const gain = audioContextRef.current.createGain();
-    gain.gain.value = shieldActive ? 0.3 : 0.6;
-    gain.gain.linearRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.45);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioContextRef.current.destination);
-    noise.start();
-  };
-
-  const playPowerUpSound = () => {
-    if (!soundEnabled) return;
-    initAudio();
-    if (!audioContextRef.current) return;
-    const osc = audioContextRef.current.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    const gain = audioContextRef.current.createGain();
-    gain.gain.value = 0.15;
-    gain.gain.linearRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.6);
-    osc.connect(gain);
-    gain.connect(audioContextRef.current.destination);
-    osc.start();
-  };
-
-  const triggerConfetti = () => {
-    confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 }, colors: ['#0052FF', '#00F0FF', '#C724FF'] });
-  };
-
   const startGame = useCallback(() => {
     initAudio();
-    startEngineSound();
-    if (musicEnabled) startBackgroundMusic();
+    startBackgroundMusic();
     setGameStarted(true);
     setGameOver(false);
     setIsPaused(false);
@@ -398,8 +329,6 @@ export default function BasedDodge() {
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
 
-    updateEngineSound(moving ? 1.8 : 0.6);
-
     trails.current.push({ x: player.current.x, y: player.current.y + 12, life: 18 });
     for (let i = trails.current.length - 1; i >= 0; i--) {
       const t = trails.current[i];
@@ -442,7 +371,7 @@ export default function BasedDodge() {
         y: -h - 60,
         width: w,
         height: h,
-        speed: (4.3 + difficulty.current * 1.7) * slowMoFactor,
+        speed: (4.3 + difficulty.current * 1.7),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
         rotSpeed: (Math.random() - 0.5) * 0.24,
@@ -605,7 +534,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">IMMERSIVE AUDIO • DYNAMIC DIFFICULTY</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">PAUSE • RESUME • PERFECTED</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -620,7 +549,15 @@ export default function BasedDodge() {
                 height={640} 
                 className="mx-auto rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black" 
               />
-              
+
+              {isPaused && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 rounded-3xl z-20">
+                  <div className="text-7xl font-bold text-[#00F0FF] mb-8">PAUSED</div>
+                  <button onClick={() => setIsPaused(false)} className="px-16 py-6 bg-white/10 hover:bg-white/20 rounded-2xl text-2xl font-bold mb-4">RESUME</button>
+                  <button onClick={() => { setIsPaused(false); setGameStarted(false); }} className="px-16 py-6 bg-white/10 hover:bg-white/20 rounded-2xl text-2xl font-bold">MAIN MENU</button>
+                </motion.div>
+              )}
+
               {gameOver && (
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl p-8">
                   <div className="text-8xl mb-4">🏁</div>
@@ -638,7 +575,7 @@ export default function BasedDodge() {
       </main>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        BACKGROUND MUSIC • IMMERSIVE AUDIO • ON BASE
+        PAUSE WITH P • FULLY POLISHED • ON BASE
       </footer>
     </div>
   );
