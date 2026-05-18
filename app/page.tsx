@@ -48,17 +48,11 @@ interface Achievement {
   scoreRequired: number;
 }
 
-interface OnchainEntry {
-  address: string;
-  score: number;
-}
-
 const HIGHSCORE_CONTRACT = "0x4200000000000000000000000000000000000420" as const;
 
 const HIGHSCORE_ABI = [
   { "inputs": [], "name": "getHighScore", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
   { "inputs": [{ "internalType": "uint256", "name": "_score", "type": "uint256" }], "name": "setHighScore", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-  { "inputs": [], "name": "getTopScores", "outputs": [{ "internalType": "address[]", "name": "", "type": "address[]" }, { "internalType": "uint256[]", "name": "", "type": "uint256[]" }], "stateMutability": "view", "type": "function" },
 ] as const;
 
 export default function BasedDodge() {
@@ -68,6 +62,7 @@ export default function BasedDodge() {
   const [highScore, setHighScore] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [combo, setCombo] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState(1);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -79,12 +74,17 @@ export default function BasedDodge() {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [graphicsQuality, setGraphicsQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [fps, setFps] = useState(60);
-  const [onchainLeaderboard, setOnchainLeaderboard] = useState<OnchainEntry[]>([]);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
     { id: 'neon-god', name: 'NEON GOD', desc: 'Reach 1000 points', unlocked: false, scoreRequired: 1000 },
     { id: 'base-legend', name: 'BASE LEGEND', desc: 'Reach 2000 points', unlocked: false, scoreRequired: 2000 },
+  ]);
+
+  const [leaderboard, setLeaderboard] = useState([
+    { address: "0x8aB...cD3f", score: 1240 },
+    { address: "0x4f9...aB2e", score: 980 },
+    { address: "0x2e7...9K1p", score: 760 },
   ]);
 
   const { address, isConnected } = useAccount();
@@ -161,17 +161,8 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I just scored ${finalScore} in BasedDodge on Base ⚡ Neon endless survival!`;
+    const text = `I reached Wave ${currentLevel} with ${finalScore} points in BasedDodge on Base ⚡`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
-  };
-
-  const fetchOnchainLeaderboard = async () => {
-    // Simulated for demo - in real project call getTopScores
-    setOnchainLeaderboard([
-      { address: "0x8aB...cD3f", score: 1240 },
-      { address: "0x4f9...aB2e", score: 980 },
-      { address: "0x2e7...9K1p", score: 760 },
-    ]);
   };
 
   const initAudio = useCallback(() => {
@@ -215,6 +206,7 @@ export default function BasedDodge() {
     setCombo(0);
     setShieldActive(false);
     setSlowMoActive(false);
+    setCurrentLevel(1);
     player.current = { x: 460, y: 480, size: 32, speed: 9.4 };
     obstacles.current = [];
     particles.current = [];
@@ -373,7 +365,8 @@ export default function BasedDodge() {
     ctx.restore();
 
     frameCount.current++;
-    if (frameCount.current % Math.max(5, Math.floor(26 / difficulty.current)) === 0) {
+    const spawnRate = Math.max(5, Math.floor(26 / difficulty.current));
+    if (frameCount.current % spawnRate === 0) {
       const w = 32 + Math.random() * 74;
       const h = 32 + Math.random() * 74;
       obstacles.current.push({
@@ -381,10 +374,10 @@ export default function BasedDodge() {
         y: -h - 60,
         width: w,
         height: h,
-        speed: (4.3 + difficulty.current * 1.7),
+        speed: (4.3 + difficulty.current * 1.75),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 0.24,
+        rotSpeed: (Math.random() - 0.5) * 0.26,
       });
     }
 
@@ -453,6 +446,10 @@ export default function BasedDodge() {
     ctx.shadowColor = '#00F0FF';
     ctx.fillText(`SCORE ${Math.floor(score * multiplier).toString().padStart(6, '0')}`, 48, 82);
 
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(`WAVE ${currentLevel}`, canvas.width - 220, 82);
+
     if (multiplier > 1) {
       ctx.fillStyle = '#C724FF';
       ctx.font = 'bold 22px monospace';
@@ -464,14 +461,15 @@ export default function BasedDodge() {
     ctx.shadowBlur = 0;
     ctx.fillText(`FPS ${fps}`, canvas.width - 110, 38);
 
-    if (score > 0 && score % 260 === 0) {
-      difficulty.current = Math.min(13, difficulty.current + 0.8);
+    if (score > 0 && score % 280 === 0) {
+      difficulty.current = Math.min(14, difficulty.current + 0.9);
+      setCurrentLevel(l => l + 1);
     }
 
     if (shake.current > 0) shake.current *= 0.82;
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [score, multiplier, isPaused, slowMoActive, graphicsQuality, fps, endGame]);
+  }, [score, multiplier, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => {
@@ -526,7 +524,7 @@ export default function BasedDodge() {
           <div className="flex items-center gap-4">
             <button onClick={() => setShowSettings(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">SETTINGS</button>
             <button onClick={() => setShowAchievements(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">ACHIEVEMENTS</button>
-            <button onClick={() => { setShowLeaderboard(true); fetchOnchainLeaderboard(); }} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">ONCHAIN LB</button>
+            <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">LEADERBOARD</button>
             <Wallet>
               <ConnectWallet />
               <WalletDropdown>
@@ -544,7 +542,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">ONCHAIN LEADERBOARD ENABLED</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">WAVE-BASED PROGRESSION</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -565,6 +563,7 @@ export default function BasedDodge() {
                   <div className="text-8xl mb-4">🏁</div>
                   <div className="text-6xl font-bold text-[#00F0FF] mb-2">MISSION COMPLETE</div>
                   <div className="text-7xl font-mono mb-6 text-white">{finalScore}</div>
+                  <div className="text-xl mb-8">REACHED WAVE {currentLevel}</div>
                   <div className="flex gap-4">
                     <button onClick={startGame} className="px-14 py-6 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-2xl font-bold">PLAY AGAIN</button>
                     <button onClick={() => shareToX(finalScore)} className="px-14 py-6 border-2 border-[#00F0FF] hover:bg-[#00F0FF] hover:text-black rounded-2xl text-2xl font-bold transition">SHARE ON X</button>
@@ -577,7 +576,7 @@ export default function BasedDodge() {
       </main>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ONCHAIN LEADERBOARD • LIVE HIGH SCORES ON BASE
+        WAVE SYSTEM • PROGRESSIVE DIFFICULTY • ON BASE
       </footer>
     </div>
   );
