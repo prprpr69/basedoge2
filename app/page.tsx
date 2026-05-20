@@ -113,13 +113,6 @@ export default function BasedDodge() {
   const shake = useRef(0);
   const comboTimer = useRef(0);
 
-  // Virtual Joystick
-  const joystickRef = useRef<HTMLDivElement>(null);
-  const joystickKnobRef = useRef<HTMLDivElement>(null);
-  const isDraggingJoystick = useRef(false);
-  const joystickCenter = useRef({ x: 0, y: 0 });
-  const joystickVector = useRef({ x: 0, y: 0 });
-
   const audioContextRef = useRef<AudioContext | null>(null);
   const engineOscRef = useRef<OscillatorNode | null>(null);
   const musicOscRef = useRef<OscillatorNode | null>(null);
@@ -128,6 +121,12 @@ export default function BasedDodge() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
+
+  const joystickRef = useRef<HTMLDivElement>(null);
+  const joystickKnobRef = useRef<HTMLDivElement>(null);
+  const isDraggingJoystick = useRef(false);
+  const joystickCenter = useRef({ x: 0, y: 0 });
+  const joystickVector = useRef({ x: 0, y: 0 });
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -168,7 +167,7 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I reached Wave ${currentLevel} with ${finalScore} points in BasedDodge on Base ⚡`;
+    const text = `I reached Wave ${currentLevel} scoring ${finalScore} in BasedDodge on Base ⚡`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
@@ -274,24 +273,24 @@ export default function BasedDodge() {
   };
 
   const createExplosion = (x: number, y: number, intense = false) => {
-    const count = intense ? 55 : 42;
+    const count = intense ? 65 : 42;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const vel = intense ? 3 + Math.random() * 9 : 2.5 + Math.random() * 7.5;
+      const vel = intense ? 3.5 + Math.random() * 10 : 2.5 + Math.random() * 7.5;
       particles.current.push({
         x, y,
         vx: Math.cos(angle) * vel,
-        vy: Math.sin(angle) * vel - (intense ? 3 : 2.8),
-        life: intense ? 70 : 55,
+        vy: Math.sin(angle) * vel - (intense ? 4 : 2.8),
+        life: intense ? 75 : 55,
         color: Math.random() > 0.5 ? '#00F0FF' : '#FF2D55',
-        size: 4 + Math.random() * 8,
+        size: 4 + Math.random() * 9,
       });
     }
     playHitSound();
   };
 
   const spawnPowerUp = () => {
-    if (Math.random() < 0.019) {
+    if (Math.random() < 0.022) {
       powerUps.current.push({
         x: Math.random() * 780 + 70,
         y: -40,
@@ -321,34 +320,28 @@ export default function BasedDodge() {
     }
 
     const slowMoFactor = slowMoActive ? 0.45 : 1;
-    ctx.fillStyle = 'rgba(10, 20, 41, 0.92)';
+    ctx.fillStyle = 'rgba(10, 20, 41, 0.93)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = 'rgba(0, 82, 255, 0.25)';
+    ctx.strokeStyle = 'rgba(0, 82, 255, 0.28)';
     ctx.lineWidth = 1.5;
     for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
     for (let y = 18; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
 
-    // Keyboard + Virtual Joystick movement
-    let moveX = 0;
-    let moveY = 0;
-
+    let moveX = 0, moveY = 0;
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) moveX -= 1;
     if (keys.current['ArrowRight'] || keys.current['d'] || keys.current['D']) moveX += 1;
     if (keys.current['ArrowUp'] || keys.current['w'] || keys.current['W']) moveY -= 1;
     if (keys.current['ArrowDown'] || keys.current['s'] || keys.current['S']) moveY += 1;
 
-    // Apply joystick
     moveX += joystickVector.current.x;
     moveY += joystickVector.current.y;
 
-    const moveLength = Math.sqrt(moveX * moveX + moveY * moveY);
-    if (moveLength > 0) {
-      const normX = moveX / moveLength;
-      const normY = moveY / moveLength;
-      player.current.x += normX * player.current.speed;
-      player.current.y += normY * player.current.speed * 0.85;
-    }
+    const moveLength = Math.sqrt(moveX * moveX + moveY * moveY) || 1;
+    const normX = moveX / moveLength;
+    const normY = moveY / moveLength;
+    player.current.x += normX * player.current.speed;
+    player.current.y += normY * player.current.speed * 0.85;
 
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
@@ -367,7 +360,7 @@ export default function BasedDodge() {
 
     ctx.save();
     ctx.translate(player.current.x + (shake.current * (Math.random() - 0.5)), player.current.y);
-    ctx.shadowBlur = 55;
+    ctx.shadowBlur = 65;
     ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
@@ -379,7 +372,7 @@ export default function BasedDodge() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 35;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
     ctx.arc(0, -14, 11, 0, Math.PI * 2);
@@ -387,18 +380,18 @@ export default function BasedDodge() {
     ctx.restore();
 
     frameCount.current++;
-    if (frameCount.current % Math.max(5, Math.floor(26 / difficulty.current)) === 0) {
-      const w = 32 + Math.random() * 74;
-      const h = 32 + Math.random() * 74;
+    if (frameCount.current % Math.max(5, Math.floor(25 / difficulty.current)) === 0) {
+      const w = 32 + Math.random() * 78;
+      const h = 32 + Math.random() * 78;
       obstacles.current.push({
         x: Math.random() * (canvas.width - w),
-        y: -h - 60,
+        y: -h - 70,
         width: w,
         height: h,
-        speed: (4.3 + difficulty.current * 1.75),
+        speed: (4.4 + difficulty.current * 1.8),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 0.26,
+        rotSpeed: (Math.random() - 0.5) * 0.28,
       });
     }
 
@@ -412,7 +405,7 @@ export default function BasedDodge() {
       ctx.save();
       ctx.translate(obs.x + obs.width/2, obs.y + obs.height/2);
       ctx.rotate(obs.rotation);
-      ctx.shadowBlur = graphicsQuality === 'high' ? 40 : 25;
+      ctx.shadowBlur = graphicsQuality === 'high' ? 45 : 28;
       ctx.shadowColor = obs.color;
       ctx.fillStyle = obs.color;
       ctx.strokeStyle = '#FFFFFF';
@@ -432,7 +425,7 @@ export default function BasedDodge() {
           continue;
         } else {
           createExplosion(player.current.x, player.current.y, true);
-          shake.current = 12;
+          shake.current = 18;
           endGame();
           return;
         }
@@ -448,13 +441,13 @@ export default function BasedDodge() {
       const p = particles.current[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.22;
-      p.life -= 1.25;
-      p.size *= 0.952;
+      p.vy += 0.24;
+      p.life -= 1.3;
+      p.size *= 0.948;
       ctx.save();
       ctx.globalAlpha = p.life / 58;
       ctx.fillStyle = p.color;
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 24;
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
@@ -483,51 +476,14 @@ export default function BasedDodge() {
     ctx.fillText(`FPS ${fps}`, canvas.width - 110, 38);
 
     if (score > 0 && score % 260 === 0) {
-      difficulty.current = Math.min(13, difficulty.current + 0.8);
+      difficulty.current = Math.min(14.5, difficulty.current + 0.85);
       setCurrentLevel(l => l + 1);
     }
 
-    if (shake.current > 0) shake.current *= 0.82;
+    if (shake.current > 0) shake.current *= 0.78;
 
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [score, multiplier, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
-
-  // Virtual Joystick Handlers
-  const handleJoystickStart = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!gameStarted || isPaused) return;
-    isDraggingJoystick.current = true;
-    const rect = joystickRef.current!.getBoundingClientRect();
-    joystickCenter.current = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    handleJoystickMove(e as any);
-  };
-
-  const handleJoystickMove = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDraggingJoystick.current) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
-    let dx = clientX - joystickCenter.current.x;
-    let dy = clientY - joystickCenter.current.y;
-    const dist = Math.min(45, Math.sqrt(dx * dx + dy * dy));
-    const angle = Math.atan2(dy, dx);
-
-    dx = Math.cos(angle) * dist;
-    dy = Math.sin(angle) * dist;
-
-    joystickVector.current = { x: dx / 45, y: dy / 45 };
-
-    if (joystickKnobRef.current) {
-      joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
-    }
-  };
-
-  const handleJoystickEnd = () => {
-    isDraggingJoystick.current = false;
-    joystickVector.current = { x: 0, y: 0 };
-    if (joystickKnobRef.current) {
-      joystickKnobRef.current.style.transform = 'translate(0px, 0px)';
-    }
-  };
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => keys.current[e.key] = true;
@@ -543,6 +499,25 @@ export default function BasedDodge() {
       stopBackgroundMusic();
     };
   }, [gameStarted]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!gameStarted || isPaused) return;
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current || !gameStarted || isPaused) return;
+    const touch = e.touches[0];
+    player.current.x += (touch.clientX - touchStartX.current) * 0.85;
+    player.current.y += (touch.clientY - touchStartY.current) * 0.85;
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = () => { isDragging.current = false; };
 
   const finalScore = Math.floor(score * multiplier);
 
@@ -577,7 +552,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">VIRTUAL JOYSTICK ENABLED</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">INTENSE WAVES • POLISHED EXPERIENCE</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -592,20 +567,6 @@ export default function BasedDodge() {
                 height={640} 
                 className="mx-auto rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black" 
               />
-
-              {/* Virtual Joystick - Mobile only */}
-              <div className="md:hidden absolute bottom-8 left-8 z-30" ref={joystickRef}
-                onTouchStart={handleJoystickStart}
-                onTouchMove={handleJoystickMove}
-                onTouchEnd={handleJoystickEnd}
-                onMouseDown={handleJoystickStart}
-                onMouseMove={handleJoystickMove}
-                onMouseUp={handleJoystickEnd}
-                onMouseLeave={handleJoystickEnd}>
-                <div className="w-28 h-28 rounded-full border-4 border-[#00F0FF30] bg-black/40 backdrop-blur-xl flex items-center justify-center">
-                  <div ref={joystickKnobRef} className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00F0FF] to-[#0052FF] shadow-lg transition-transform duration-75" />
-                </div>
-              </div>
 
               {isPaused && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 rounded-3xl z-20">
@@ -633,7 +594,7 @@ export default function BasedDodge() {
       </main>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        VIRTUAL JOYSTICK • WAVE {currentLevel} • ON BASE
+        INTENSE BALANCE • WAVES • ON BASE
       </footer>
     </div>
   );
