@@ -167,7 +167,7 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I reached Wave ${currentLevel} scoring ${finalScore} in BasedDodge on Base ⚡`;
+    const text = `I reached Wave ${currentLevel} with ${finalScore} points in BasedDodge on Base ⚡ Pure neon adrenaline!`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
@@ -388,10 +388,10 @@ export default function BasedDodge() {
         y: -h - 70,
         width: w,
         height: h,
-        speed: (4.4 + difficulty.current * 1.8),
+        speed: (4.4 + difficulty.current * 1.85),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
-        rotSpeed: (Math.random() - 0.5) * 0.28,
+        rotSpeed: (Math.random() - 0.5) * 0.29,
       });
     }
 
@@ -447,7 +447,7 @@ export default function BasedDodge() {
       ctx.save();
       ctx.globalAlpha = p.life / 58;
       ctx.fillStyle = p.color;
-      ctx.shadowBlur = 24;
+      ctx.shadowBlur = 26;
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
@@ -548,13 +548,29 @@ export default function BasedDodge() {
       <main className="pt-28 flex items-center justify-center min-h-screen" ref={containerRef}>
         <AnimatePresence mode="wait">
           {!gameStarted && !gameOver && (
-            <motion.div key="menu" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="text-center px-6">
-              <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
+            <motion.div 
+              key="menu" 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              className="text-center px-6 relative z-10"
+            >
+              <motion.div 
+                animate={{ 
+                  textShadow: ["0 0 20px #00F0FF", "0 0 60px #0052FF", "0 0 20px #00F0FF"]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent mb-4"
+              >
                 BASEDDODGE
-              </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">INTENSE WAVES • POLISHED EXPERIENCE</p>
-              <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
-                LAUNCH INTO BASE
+              </motion.div>
+              <p className="text-2xl text-[#00F0FF] mt-2">ENDLESS NEON SURVIVAL ON BASE</p>
+              <motion.button 
+                onClick={startGame} 
+                whileHover={{ scale: 1.08, boxShadow: "0 0 80px #00F0FF" }}
+                whileTap={{ scale: 0.98 }}
+                className="mt-16 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] via-[#0066FF] to-[#00F0FF] shadow-2xl"
+              >
+                ENTER THE GRID
               </motion.button>
             </motion.div>
           )}
@@ -594,7 +610,7 @@ export default function BasedDodge() {
       </main>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        INTENSE BALANCE • WAVES • ON BASE
+        CINEMATIC INTRO • IMMERSIVE EXPERIENCE • ON BASE
       </footer>
     </div>
   );
