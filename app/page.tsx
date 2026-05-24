@@ -48,6 +48,12 @@ interface Achievement {
   scoreRequired: number;
 }
 
+interface Toast {
+  id: number;
+  message: string;
+  type: 'achievement' | 'milestone' | 'highscore';
+}
+
 const HIGHSCORE_CONTRACT = "0x4200000000000000000000000000000000000420" as const;
 
 const HIGHSCORE_ABI = [
@@ -58,7 +64,6 @@ const HIGHSCORE_ABI = [
 export default function BasedDodge() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
@@ -75,6 +80,7 @@ export default function BasedDodge() {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [graphicsQuality, setGraphicsQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [fps, setFps] = useState(60);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -129,6 +135,14 @@ export default function BasedDodge() {
   const joystickCenter = useRef({ x: 0, y: 0 });
   const joystickVector = useRef({ x: 0, y: 0 });
 
+  const addToast = (message: string, type: 'achievement' | 'milestone' | 'highscore') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 2800);
+  };
+
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -155,20 +169,27 @@ export default function BasedDodge() {
     if (newScore > highScore) {
       localStorage.setItem('basedDodgeHighScore', newScore.toString());
       setHighScore(newScore);
+      addToast(`NEW HIGH SCORE: ${newScore}`, 'highscore');
     }
   };
 
   const unlockAchievement = (id: string) => {
     setAchievements(prev => {
-      const updated = prev.map(a => a.id === id && !a.unlocked ? { ...a, unlocked: true } : a);
+      const updated = prev.map(a => {
+        if (a.id === id && !a.unlocked) {
+          addToast(`ACHIEVEMENT UNLOCKED: ${a.name}`, 'achievement');
+          return { ...a, unlocked: true };
+        }
+        return a;
+      });
       localStorage.setItem('basedDodgeAchievements', JSON.stringify(updated));
       return updated;
     });
-    confetti({ particleCount: 180, spread: 80 });
+    confetti({ particleCount: 220, spread: 90 });
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `I reached Wave ${currentLevel} scoring ${finalScore} in BasedDodge on Base ⚡`;
+    const text = `Wave ${currentLevel} • ${finalScore} points in BasedDodge on Base ⚡`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
@@ -203,34 +224,30 @@ export default function BasedDodge() {
   };
 
   const startGame = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      initAudio();
-      startBackgroundMusic();
-      setGameStarted(true);
-      setGameOver(false);
-      setIsPaused(false);
-      setScore(0);
-      setMultiplier(1);
-      setCombo(0);
-      setShieldActive(false);
-      setSlowMoActive(false);
-      setCurrentLevel(1);
-      player.current = { x: 460, y: 480, size: 32, speed: 9.4 };
-      obstacles.current = [];
-      particles.current = [];
-      trails.current = [];
-      powerUps.current = [];
-      frameCount.current = 0;
-      difficulty.current = 1;
-      shake.current = 0;
-      joystickVector.current = { x: 0, y: 0 };
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      lastFrameTime.current = Date.now();
-      frameCountRef.current = 0;
-      gameLoop();
-    }, 680);
+    initAudio();
+    startBackgroundMusic();
+    setGameStarted(true);
+    setGameOver(false);
+    setIsPaused(false);
+    setScore(0);
+    setMultiplier(1);
+    setCombo(0);
+    setShieldActive(false);
+    setSlowMoActive(false);
+    setCurrentLevel(1);
+    player.current = { x: 460, y: 480, size: 32, speed: 9.4 };
+    obstacles.current = [];
+    particles.current = [];
+    trails.current = [];
+    powerUps.current = [];
+    frameCount.current = 0;
+    difficulty.current = 1;
+    shake.current = 0;
+    joystickVector.current = { x: 0, y: 0 };
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    lastFrameTime.current = Date.now();
+    frameCountRef.current = 0;
+    gameLoop();
   }, [musicEnabled]);
 
   const endGame = useCallback(() => {
@@ -552,23 +569,14 @@ export default function BasedDodge() {
 
       <main className="pt-28 flex items-center justify-center min-h-screen" ref={containerRef}>
         <AnimatePresence mode="wait">
-          {isLoading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center bg-[#0A1429] z-50">
-              <div className="text-center">
-                <div className="w-16 h-16 border-4 border-[#00F0FF] border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                <div className="text-2xl font-bold text-[#00F0FF]">CONNECTING TO BASE...</div>
-              </div>
-            </motion.div>
-          )}
-
-          {!gameStarted && !gameOver && !isLoading && (
+          {!gameStarted && !gameOver && (
             <motion.div key="menu" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="text-center px-6">
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">SMOOTH LOADING • CINEMATIC EXPERIENCE</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">LIVE NOTIFICATIONS • POLISHED UX</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
-                ENTER THE GRID
+                LAUNCH INTO BASE
               </motion.button>
             </motion.div>
           )}
@@ -607,8 +615,34 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
+      {/* Toast Notifications */}
+      <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3">
+        <AnimatePresence>
+          {toasts.map((toast, index) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              transition={{ duration: 0.4 }}
+              className={`glass px-6 py-4 rounded-2xl border-l-4 flex items-center gap-4 shadow-xl ${
+                toast.type === 'achievement' ? 'border-[#C724FF]' : 
+                toast.type === 'highscore' ? 'border-[#00F0FF]' : 'border-[#FFFFFF]'
+              }`}
+            >
+              <div className="text-2xl">
+                {toast.type === 'achievement' ? '🏆' : toast.type === 'highscore' ? '🔥' : '⭐'}
+              </div>
+              <div>
+                <div className="font-bold text-white">{toast.message}</div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        LOADING OPTIMIZED • SEAMLESS TRANSITIONS • ON BASE
+        LIVE TOASTS • ACHIEVEMENT SYSTEM • ON BASE
       </footer>
     </div>
   );
