@@ -125,10 +125,6 @@ export default function BasedDodge() {
   const musicOscRef = useRef<OscillatorNode | null>(null);
   const musicGainRef = useRef<GainNode | null>(null);
 
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const isDragging = useRef(false);
-
   const joystickRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
   const isDraggingJoystick = useRef(false);
@@ -344,7 +340,6 @@ export default function BasedDodge() {
       lastFrameTime.current = now;
     }
 
-    const slowMoFactor = slowMoActive ? 0.45 : 1;
     ctx.fillStyle = 'rgba(10, 20, 41, 0.93)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -359,8 +354,8 @@ export default function BasedDodge() {
     if (keys.current['ArrowUp'] || keys.current['w'] || keys.current['W']) moveY -= 1;
     if (keys.current['ArrowDown'] || keys.current['s'] || keys.current['S']) moveY += 1;
 
-    moveX += joystickVector.current.x;
-    moveY += joystickVector.current.y;
+    moveX += joystickVector.current.x * 1.1;
+    moveY += joystickVector.current.y * 1.1;
 
     const moveLength = Math.sqrt(moveX * moveX + moveY * moveY) || 1;
     const normX = moveX / moveLength;
@@ -526,24 +521,50 @@ export default function BasedDodge() {
     };
   }, [gameStarted]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Virtual Joystick Handlers
+  const handleJoystickStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (!gameStarted || isPaused) return;
-    const touch = e.touches[0];
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-    isDragging.current = true;
+    isDraggingJoystick.current = true;
+    const rect = joystickRef.current?.getBoundingClientRect();
+    if (rect) {
+      joystickCenter.current = { x: rect.left + 60, y: rect.top + 60 };
+    }
+    updateJoystick(e);
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current || !gameStarted || isPaused) return;
-    const touch = e.touches[0];
-    player.current.x += (touch.clientX - touchStartX.current) * 0.85;
-    player.current.y += (touch.clientY - touchStartY.current) * 0.85;
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
+  const handleJoystickMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDraggingJoystick.current) return;
+    updateJoystick(e);
   };
 
-  const handleTouchEnd = () => { isDragging.current = false; };
+  const handleJoystickEnd = () => {
+    isDraggingJoystick.current = false;
+    joystickVector.current = { x: 0, y: 0 };
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(0px, 0px)`;
+    }
+  };
+
+  const updateJoystick = (e: any) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    let dx = clientX - joystickCenter.current.x;
+    let dy = clientY - joystickCenter.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = 58;
+
+    if (dist > maxDist) {
+      dx = (dx / dist) * maxDist;
+      dy = (dy / dist) * maxDist;
+    }
+
+    joystickVector.current = { x: dx / maxDist, y: dy / maxDist };
+
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+  };
 
   const finalScore = Math.floor(score * multiplier);
 
@@ -578,7 +599,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">LIVE TOASTS • MILESTONE CELEBRATIONS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">VIRTUAL JOYSTICK • MOBILE OPTIMIZED</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -586,13 +607,33 @@ export default function BasedDodge() {
           )}
 
           {(gameStarted || gameOver) && (
-            <div className="relative select-none w-full max-w-[940px] mx-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+            <div className="relative select-none w-full max-w-[940px] mx-auto">
               <canvas 
                 ref={canvasRef} 
                 width={920} 
                 height={640} 
                 className="mx-auto rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black" 
               />
+
+              {/* Virtual Joystick - visible only on mobile */}
+              <div className="md:hidden fixed bottom-8 left-8 z-50">
+                <div 
+                  ref={joystickRef}
+                  onMouseDown={handleJoystickStart}
+                  onTouchStart={handleJoystickStart}
+                  onMouseMove={handleJoystickMove}
+                  onTouchMove={handleJoystickMove}
+                  onMouseUp={handleJoystickEnd}
+                  onTouchEnd={handleJoystickEnd}
+                  onMouseLeave={handleJoystickEnd}
+                  className="w-[120px] h-[120px] rounded-full border-4 border-[#00F0FF40] bg-[#0052FF10] flex items-center justify-center cursor-grab active:cursor-grabbing"
+                >
+                  <div 
+                    ref={joystickKnobRef}
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00F0FF] to-[#0052FF] shadow-[0_0_30px_#00F0FF]"
+                  />
+                </div>
+              </div>
 
               {isPaused && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 rounded-3xl z-20">
@@ -643,7 +684,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        LIVE TOASTS • MILESTONE CELEBRATIONS • ON BASE
+        VIRTUAL JOYSTICK • ENHANCED MOBILE CONTROLS • ON BASE
       </footer>
     </div>
   );
