@@ -512,7 +512,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Combo decay
     if (comboTimer.current > 0) {
       comboTimer.current--;
     } else if (combo > 0) {
@@ -661,7 +660,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC COMBO + MULTIPLIER SYSTEM</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">FULL SETTINGS PANEL • AUDIO & GRAPHICS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -718,6 +717,59 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center"
+            onClick={() => setShowSettings(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass p-10 rounded-3xl w-full max-w-md mx-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-4xl font-bold text-center mb-8 text-[#00F0FF]">SETTINGS</h2>
+              
+              <div className="space-y-8">
+                <div>
+                  <div className="flex justify-between mb-3">
+                    <span>Music</span>
+                    <button onClick={() => setMusicEnabled(!musicEnabled)} className={`px-6 py-1 rounded-full text-sm ${musicEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{musicEnabled ? 'ON' : 'OFF'}</button>
+                  </div>
+                  <div>
+                    <span>Sound Effects</span>
+                    <button onClick={() => setSoundEnabled(!soundEnabled)} className={`px-6 py-1 rounded-full text-sm ${soundEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{soundEnabled ? 'ON' : 'OFF'}</button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3">Graphics Quality</div>
+                  <div className="flex gap-3">
+                    {(['high', 'medium', 'low'] as const).map(q => (
+                      <button
+                        key={q}
+                        onClick={() => setGraphicsQuality(q)}
+                        className={`flex-1 py-3 rounded-2xl text-sm font-medium capitalize transition ${graphicsQuality === q ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => setShowSettings(false)} className="mt-10 w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-lg font-bold">CLOSE</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
@@ -741,7 +793,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ADVANCED COMBO MULTIPLIER • CHAIN REACTIONS • ON BASE
+        SETTINGS PANEL • AUDIO & GRAPHICS CONTROL • ON BASE
       </footer>
     </div>
   );
