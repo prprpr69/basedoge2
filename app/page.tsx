@@ -138,9 +138,7 @@ export default function BasedDodge() {
   const addToast = (message: string, type: 'achievement' | 'milestone' | 'highscore') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 2800);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2600);
   };
 
   const resizeCanvas = useCallback(() => {
@@ -170,6 +168,7 @@ export default function BasedDodge() {
       localStorage.setItem('basedDodgeHighScore', newScore.toString());
       setHighScore(newScore);
       addToast(`NEW HIGH SCORE: ${newScore}`, 'highscore');
+      triggerConfetti();
     }
   };
 
@@ -185,12 +184,16 @@ export default function BasedDodge() {
       localStorage.setItem('basedDodgeAchievements', JSON.stringify(updated));
       return updated;
     });
-    confetti({ particleCount: 220, spread: 90 });
+    triggerConfetti();
   };
 
   const shareToX = (finalScore: number) => {
     const text = `Wave ${currentLevel} • ${finalScore} points in BasedDodge on Base ⚡`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
+  };
+
+  const triggerConfetti = () => {
+    confetti({ particleCount: 280, spread: 100, origin: { y: 0.6 }, colors: ['#0052FF', '#00F0FF', '#C724FF'] });
   };
 
   const initAudio = useCallback(() => {
@@ -500,6 +503,7 @@ export default function BasedDodge() {
     if (score > 0 && score % 260 === 0) {
       difficulty.current = Math.min(14.5, difficulty.current + 0.85);
       setCurrentLevel(l => l + 1);
+      addToast(`WAVE ${currentLevel + 1} STARTED`, 'milestone');
     }
 
     if (shake.current > 0) shake.current *= 0.78;
@@ -574,7 +578,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">LIVE NOTIFICATIONS • POLISHED UX</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">LIVE TOASTS • MILESTONE CELEBRATIONS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -616,33 +620,30 @@ export default function BasedDodge() {
       </main>
 
       {/* Toast Notifications */}
-      <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3">
+      <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
-          {toasts.map((toast, index) => (
+          {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-              transition={{ duration: 0.4 }}
-              className={`glass px-6 py-4 rounded-2xl border-l-4 flex items-center gap-4 shadow-xl ${
+              initial={{ opacity: 0, x: 120, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 120, scale: 0.8 }}
+              className={`glass px-6 py-4 rounded-2xl border-l-4 flex items-center gap-4 shadow-2xl max-w-xs ${
                 toast.type === 'achievement' ? 'border-[#C724FF]' : 
-                toast.type === 'highscore' ? 'border-[#00F0FF]' : 'border-[#FFFFFF]'
+                toast.type === 'highscore' ? 'border-[#00F0FF]' : 'border-white'
               }`}
             >
-              <div className="text-2xl">
-                {toast.type === 'achievement' ? '🏆' : toast.type === 'highscore' ? '🔥' : '⭐'}
-              </div>
-              <div>
-                <div className="font-bold text-white">{toast.message}</div>
-              </div>
+              <span className="text-3xl">
+                {toast.type === 'achievement' ? '🏆' : toast.type === 'highscore' ? '🔥' : '🌟'}
+              </span>
+              <div className="font-medium">{toast.message}</div>
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        LIVE TOASTS • ACHIEVEMENT SYSTEM • ON BASE
+        LIVE TOASTS • MILESTONE CELEBRATIONS • ON BASE
       </footer>
     </div>
   );
