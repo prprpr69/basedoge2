@@ -243,6 +243,7 @@ export default function BasedDodge() {
     frameCount.current = 0;
     difficulty.current = 1;
     shake.current = 0;
+    comboTimer.current = 0;
     joystickVector.current = { x: 0, y: 0 };
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
     lastFrameTime.current = Date.now();
@@ -418,7 +419,6 @@ export default function BasedDodge() {
 
     spawnPowerUp();
 
-    // Power-up collection & activation
     for (let i = powerUps.current.length - 1; i >= 0; i--) {
       const pu = powerUps.current[i];
       pu.y += 3.2;
@@ -456,7 +456,6 @@ export default function BasedDodge() {
       if (pu.life <= 0) powerUps.current.splice(i, 1);
     }
 
-    // Power-up timer management
     if (powerUpTimer.current > 0) {
       powerUpTimer.current--;
       if (powerUpTimer.current <= 0) {
@@ -501,8 +500,24 @@ export default function BasedDodge() {
 
       if (obs.y > canvas.height + 140) {
         obstacles.current.splice(i, 1);
-        setScore(prev => prev + 18);
+        setScore(prev => {
+          const newScore = prev + 18;
+          const newCombo = combo + 1;
+          setCombo(newCombo);
+          comboTimer.current = 90;
+          const newMult = Math.min(5, Math.floor(newCombo / 8) + 1);
+          if (newMult !== multiplier) setMultiplier(newMult);
+          return newScore;
+        });
       }
+    }
+
+    // Combo decay
+    if (comboTimer.current > 0) {
+      comboTimer.current--;
+    } else if (combo > 0) {
+      setCombo(0);
+      setMultiplier(1);
     }
 
     for (let i = particles.current.length - 1; i >= 0; i--) {
@@ -534,8 +549,8 @@ export default function BasedDodge() {
 
     if (multiplier > 1) {
       ctx.fillStyle = '#C724FF';
-      ctx.font = 'bold 22px monospace';
-      ctx.fillText(`×${multiplier}`, 48, 118);
+      ctx.font = 'bold 26px monospace';
+      ctx.fillText(`×${multiplier} COMBO ${combo}`, 48, 118);
     }
 
     if (shieldActive) {
@@ -562,7 +577,7 @@ export default function BasedDodge() {
     if (shake.current > 0) shake.current *= 0.78;
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [score, multiplier, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
+  }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => keys.current[e.key] = true;
@@ -646,7 +661,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">FULL POWER-UP SYSTEM • SHIELD + SLOW-MO</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC COMBO + MULTIPLIER SYSTEM</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -726,7 +741,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        POWER-UPS FULLY IMPLEMENTED • SHIELD + SLOW-MO • ON BASE
+        ADVANCED COMBO MULTIPLIER • CHAIN REACTIONS • ON BASE
       </footer>
     </div>
   );
