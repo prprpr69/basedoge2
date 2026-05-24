@@ -119,6 +119,7 @@ export default function BasedDodge() {
   const difficulty = useRef(1);
   const shake = useRef(0);
   const comboTimer = useRef(0);
+  const powerUpTimer = useRef(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const engineOscRef = useRef<OscillatorNode | null>(null);
@@ -311,7 +312,7 @@ export default function BasedDodge() {
   };
 
   const spawnPowerUp = () => {
-    if (Math.random() < 0.022) {
+    if (Math.random() < 0.028) {
       powerUps.current.push({
         x: Math.random() * 780 + 70,
         y: -40,
@@ -417,6 +418,53 @@ export default function BasedDodge() {
 
     spawnPowerUp();
 
+    // Power-up collection & activation
+    for (let i = powerUps.current.length - 1; i >= 0; i--) {
+      const pu = powerUps.current[i];
+      pu.y += 3.2;
+      pu.life--;
+
+      ctx.save();
+      ctx.translate(pu.x, pu.y);
+      ctx.shadowBlur = 55;
+      ctx.shadowColor = pu.type === 'shield' ? '#C724FF' : '#00F0FF';
+      ctx.fillStyle = pu.type === 'shield' ? '#C724FF' : '#00F0FF';
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 18px monospace';
+      ctx.fillText(pu.type === 'shield' ? '🛡️' : '⏳', -9, 7);
+      ctx.restore();
+
+      const pdx = player.current.x - pu.x;
+      const pdy = player.current.y - pu.y;
+      if (Math.hypot(pdx, pdy) < 48) {
+        if (pu.type === 'shield') {
+          setShieldActive(true);
+          addToast("SHIELD ACTIVATED!", 'milestone');
+        } else {
+          setSlowMoActive(true);
+          addToast("SLOW-MO ACTIVATED!", 'milestone');
+        }
+        powerUpTimer.current = 420;
+        powerUps.current.splice(i, 1);
+        createExplosion(pu.x, pu.y, false);
+        continue;
+      }
+
+      if (pu.life <= 0) powerUps.current.splice(i, 1);
+    }
+
+    // Power-up timer management
+    if (powerUpTimer.current > 0) {
+      powerUpTimer.current--;
+      if (powerUpTimer.current <= 0) {
+        setShieldActive(false);
+        setSlowMoActive(false);
+      }
+    }
+
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -490,6 +538,16 @@ export default function BasedDodge() {
       ctx.fillText(`×${multiplier}`, 48, 118);
     }
 
+    if (shieldActive) {
+      ctx.strokeStyle = '#C724FF';
+      ctx.lineWidth = 6;
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = '#C724FF';
+      ctx.beginPath();
+      ctx.arc(player.current.x, player.current.y, 58, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     ctx.fillStyle = '#00F0FF';
     ctx.font = 'bold 14px monospace';
     ctx.shadowBlur = 0;
@@ -521,14 +579,11 @@ export default function BasedDodge() {
     };
   }, [gameStarted]);
 
-  // Virtual Joystick Handlers
   const handleJoystickStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (!gameStarted || isPaused) return;
     isDraggingJoystick.current = true;
     const rect = joystickRef.current?.getBoundingClientRect();
-    if (rect) {
-      joystickCenter.current = { x: rect.left + 60, y: rect.top + 60 };
-    }
+    if (rect) joystickCenter.current = { x: rect.left + 60, y: rect.top + 60 };
     updateJoystick(e);
   };
 
@@ -540,30 +595,22 @@ export default function BasedDodge() {
   const handleJoystickEnd = () => {
     isDraggingJoystick.current = false;
     joystickVector.current = { x: 0, y: 0 };
-    if (joystickKnobRef.current) {
-      joystickKnobRef.current.style.transform = `translate(0px, 0px)`;
-    }
+    if (joystickKnobRef.current) joystickKnobRef.current.style.transform = `translate(0px, 0px)`;
   };
 
   const updateJoystick = (e: any) => {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
     let dx = clientX - joystickCenter.current.x;
     let dy = clientY - joystickCenter.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const maxDist = 58;
-
     if (dist > maxDist) {
       dx = (dx / dist) * maxDist;
       dy = (dy / dist) * maxDist;
     }
-
     joystickVector.current = { x: dx / maxDist, y: dy / maxDist };
-
-    if (joystickKnobRef.current) {
-      joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
-    }
+    if (joystickKnobRef.current) joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
   };
 
   const finalScore = Math.floor(score * multiplier);
@@ -599,7 +646,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">VIRTUAL JOYSTICK • MOBILE OPTIMIZED</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">FULL POWER-UP SYSTEM • SHIELD + SLOW-MO</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -615,7 +662,6 @@ export default function BasedDodge() {
                 className="mx-auto rounded-3xl border-4 border-[#0052FF80] shadow-[0_0_130px_#0052FF] bg-black" 
               />
 
-              {/* Virtual Joystick - visible only on mobile */}
               <div className="md:hidden fixed bottom-8 left-8 z-50">
                 <div 
                   ref={joystickRef}
@@ -628,10 +674,7 @@ export default function BasedDodge() {
                   onMouseLeave={handleJoystickEnd}
                   className="w-[120px] h-[120px] rounded-full border-4 border-[#00F0FF40] bg-[#0052FF10] flex items-center justify-center cursor-grab active:cursor-grabbing"
                 >
-                  <div 
-                    ref={joystickKnobRef}
-                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00F0FF] to-[#0052FF] shadow-[0_0_30px_#00F0FF]"
-                  />
+                  <div ref={joystickKnobRef} className="w-16 h-16 rounded-full bg-gradient-to-br from-[#00F0FF] to-[#0052FF] shadow-[0_0_30px_#00F0FF]" />
                 </div>
               </div>
 
@@ -660,7 +703,6 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Toast Notifications */}
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
@@ -684,7 +726,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        VIRTUAL JOYSTICK • ENHANCED MOBILE CONTROLS • ON BASE
+        POWER-UPS FULLY IMPLEMENTED • SHIELD + SLOW-MO • ON BASE
       </footer>
     </div>
   );
