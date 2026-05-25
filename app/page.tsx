@@ -660,7 +660,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">FULL SETTINGS PANEL • AUDIO & GRAPHICS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">RICH ACHIEVEMENTS MODAL • PROGRESS TRACKING</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -717,7 +717,57 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Settings Modal */}
+      {/* Achievements Modal */}
+      <AnimatePresence>
+        {showAchievements && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4"
+            onClick={() => setShowAchievements(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.88, y: 40 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.88, y: 40 }}
+              className="glass w-full max-w-lg rounded-3xl p-8 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-4xl font-bold text-center mb-8 text-[#00F0FF]">ACHIEVEMENTS</h2>
+              
+              <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2">
+                {achievements.map((ach, index) => (
+                  <motion.div 
+                    key={ach.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`p-5 rounded-2xl flex gap-5 items-center border-l-4 transition-all ${ach.unlocked ? 'border-[#C724FF] bg-white/5' : 'border-white/20 opacity-60'}`}
+                  >
+                    <div className="text-5xl">{ach.unlocked ? '🏆' : '🔒'}</div>
+                    <div className="flex-1">
+                      <div className="font-bold text-lg">{ach.name}</div>
+                      <div className="text-sm text-white/70">{ach.desc}</div>
+                      <div className="text-xs mt-1 text-[#00F0FF]">{ach.scoreRequired} POINTS</div>
+                    </div>
+                    {ach.unlocked && <div className="text-[#C724FF] text-xl">✓</div>}
+                  </motion.div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setShowAchievements(false)} 
+                className="mt-8 w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-lg font-bold transition"
+              >
+                CLOSE
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal (kept from previous) */}
       <AnimatePresence>
         {showSettings && (
           <motion.div 
@@ -737,17 +787,14 @@ export default function BasedDodge() {
               <h2 className="text-4xl font-bold text-center mb-8 text-[#00F0FF]">SETTINGS</h2>
               
               <div className="space-y-8">
-                <div>
-                  <div className="flex justify-between mb-3">
-                    <span>Music</span>
-                    <button onClick={() => setMusicEnabled(!musicEnabled)} className={`px-6 py-1 rounded-full text-sm ${musicEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{musicEnabled ? 'ON' : 'OFF'}</button>
-                  </div>
-                  <div>
-                    <span>Sound Effects</span>
-                    <button onClick={() => setSoundEnabled(!soundEnabled)} className={`px-6 py-1 rounded-full text-sm ${soundEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{soundEnabled ? 'ON' : 'OFF'}</button>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span>Music</span>
+                  <button onClick={() => setMusicEnabled(!musicEnabled)} className={`px-8 py-2 rounded-full text-sm ${musicEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{musicEnabled ? 'ON' : 'OFF'}</button>
                 </div>
-
+                <div className="flex justify-between items-center">
+                  <span>Sound Effects</span>
+                  <button onClick={() => setSoundEnabled(!soundEnabled)} className={`px-8 py-2 rounded-full text-sm ${soundEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{soundEnabled ? 'ON' : 'OFF'}</button>
+                </div>
                 <div>
                   <div className="mb-3">Graphics Quality</div>
                   <div className="flex gap-3">
@@ -793,7 +840,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        SETTINGS PANEL • AUDIO & GRAPHICS CONTROL • ON BASE
+        POLISHED ACHIEVEMENTS MODAL • PROGRESS VISUALS • ON BASE
       </footer>
     </div>
   );
