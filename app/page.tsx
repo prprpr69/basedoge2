@@ -301,17 +301,17 @@ export default function BasedDodge() {
   };
 
   const createExplosion = (x: number, y: number, intense = false) => {
-    const count = intense ? 65 : 42;
+    const count = intense ? 85 : 48;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const vel = intense ? 3.5 + Math.random() * 10 : 2.5 + Math.random() * 7.5;
+      const vel = intense ? 4.2 + Math.random() * 11 : 2.8 + Math.random() * 8;
       particles.current.push({
         x, y,
         vx: Math.cos(angle) * vel,
-        vy: Math.sin(angle) * vel - (intense ? 4 : 2.8),
-        life: intense ? 75 : 55,
+        vy: Math.sin(angle) * vel - (intense ? 5 : 3),
+        life: intense ? 92 : 62,
         color: Math.random() > 0.5 ? '#00F0FF' : '#FF2D55',
-        size: 4 + Math.random() * 9,
+        size: intense ? 5.5 + Math.random() * 11 : 3.5 + Math.random() * 7,
       });
     }
     playHitSound();
@@ -347,10 +347,10 @@ export default function BasedDodge() {
       lastFrameTime.current = now;
     }
 
-    ctx.fillStyle = 'rgba(10, 20, 41, 0.93)';
+    ctx.fillStyle = 'rgba(10, 20, 41, 0.92)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = 'rgba(0, 82, 255, 0.28)';
+    ctx.strokeStyle = 'rgba(0, 82, 255, 0.32)';
     ctx.lineWidth = 1.5;
     for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
     for (let y = 18; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
@@ -373,36 +373,39 @@ export default function BasedDodge() {
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
 
-    trails.current.push({ x: player.current.x, y: player.current.y + 12, life: 18 });
+    trails.current.push({ x: player.current.x, y: player.current.y + 12, life: 22 });
     for (let i = trails.current.length - 1; i >= 0; i--) {
       const t = trails.current[i];
-      t.life -= 1;
+      t.life -= 1.1;
       if (t.life <= 0) { trails.current.splice(i, 1); continue; }
       ctx.save();
-      ctx.globalAlpha = t.life / 22;
+      ctx.globalAlpha = t.life / 26;
       ctx.fillStyle = '#00F0FF';
-      ctx.fillRect(t.x - 6, t.y, 12, 8);
+      ctx.fillRect(t.x - 7, t.y, 14, 9);
       ctx.restore();
     }
 
+    const shakeX = shake.current * (Math.random() - 0.5) * 1.6;
+    const shakeY = shake.current * (Math.random() - 0.5) * 1.2;
+
     ctx.save();
-    ctx.translate(player.current.x + (shake.current * (Math.random() - 0.5)), player.current.y);
-    ctx.shadowBlur = 65;
+    ctx.translate(player.current.x + shakeX, player.current.y + shakeY);
+    ctx.shadowBlur = 78;
     ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
     ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.moveTo(0, -44);
-    ctx.lineTo(-31, 36);
-    ctx.lineTo(31, 36);
+    ctx.moveTo(0, -46);
+    ctx.lineTo(-33, 38);
+    ctx.lineTo(33, 38);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.shadowBlur = 35;
+    ctx.shadowBlur = 38;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
-    ctx.arc(0, -14, 11, 0, Math.PI * 2);
+    ctx.arc(0, -15, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -477,7 +480,7 @@ export default function BasedDodge() {
       ctx.save();
       ctx.translate(obs.x + obs.width/2, obs.y + obs.height/2);
       ctx.rotate(obs.rotation);
-      ctx.shadowBlur = graphicsQuality === 'high' ? 45 : 28;
+      ctx.shadowBlur = graphicsQuality === 'high' ? 52 : 32;
       ctx.shadowColor = obs.color;
       ctx.fillStyle = obs.color;
       ctx.strokeStyle = '#FFFFFF';
@@ -497,7 +500,7 @@ export default function BasedDodge() {
           continue;
         } else {
           createExplosion(player.current.x, player.current.y, true);
-          shake.current = 18;
+          shake.current = 24;
           endGame();
           return;
         }
@@ -528,13 +531,13 @@ export default function BasedDodge() {
       const p = particles.current[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.24;
-      p.life -= 1.3;
-      p.size *= 0.948;
+      p.vy += 0.26;
+      p.life -= 1.35;
+      p.size *= 0.945;
       ctx.save();
-      ctx.globalAlpha = p.life / 58;
+      ctx.globalAlpha = p.life / 62;
       ctx.fillStyle = p.color;
-      ctx.shadowBlur = 26;
+      ctx.shadowBlur = 32;
       ctx.shadowColor = p.color;
       ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
       ctx.restore();
@@ -560,10 +563,10 @@ export default function BasedDodge() {
     if (shieldActive) {
       ctx.strokeStyle = '#C724FF';
       ctx.lineWidth = 6;
-      ctx.shadowBlur = 40;
+      ctx.shadowBlur = 48;
       ctx.shadowColor = '#C724FF';
       ctx.beginPath();
-      ctx.arc(player.current.x, player.current.y, 58, 0, Math.PI * 2);
+      ctx.arc(player.current.x + shakeX, player.current.y + shakeY, 58, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -578,7 +581,7 @@ export default function BasedDodge() {
       addToast(`WAVE ${currentLevel + 1} STARTED`, 'milestone');
     }
 
-    if (shake.current > 0) shake.current *= 0.78;
+    if (shake.current > 0) shake.current *= 0.74;
 
     animationRef.current = requestAnimationFrame(gameLoop);
   }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
@@ -665,7 +668,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">ONCHAIN LEADERBOARD MODAL</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">INTENSE SCREEN SHAKE • NEON VISUALS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -796,7 +799,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ONCHAIN LEADERBOARD MODAL • LIVE HIGH SCORES • ON BASE
+        ENHANCED VISUALS • POWERFUL SCREEN SHAKE • ON BASE
       </footer>
     </div>
   );
