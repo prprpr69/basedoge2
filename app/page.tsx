@@ -87,6 +87,8 @@ export default function BasedDodge() {
   const [graphicsQuality, setGraphicsQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [fps, setFps] = useState(60);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -157,6 +159,17 @@ export default function BasedDodge() {
     window.addEventListener('resize', resizeCanvas);
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [resizeCanvas]);
+
+  // PWA Install Prompt
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   useEffect(() => {
     const savedHigh = localStorage.getItem('basedDodgeHighScore');
@@ -649,6 +662,15 @@ export default function BasedDodge() {
     if (joystickKnobRef.current) joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
   };
 
+  const installPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    }
+  };
+
   const finalScore = Math.floor(score * multiplier);
 
   return (
@@ -682,7 +704,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">SMOOTH PAUSE SYSTEM • COUNTDOWN RESUME</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">PWA READY • INSTALLABLE • OFFLINE PLAY</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -756,7 +778,21 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Leaderboard, Achievements, Settings Modals (omitted for brevity - carried from previous commits) */}
+      {/* Install Prompt */}
+      <AnimatePresence>
+        {showInstallPrompt && deferredPrompt && (
+          <motion.div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] glass px-8 py-6 rounded-3xl flex items-center gap-6 shadow-2xl">
+            <div>
+              <div className="font-bold text-lg">Install BasedDodge</div>
+              <div className="text-sm text-white/70">Play offline • Add to home screen</div>
+            </div>
+            <button onClick={installPWA} className="px-8 py-3 bg-[#00F0FF] text-black font-bold rounded-2xl">INSTALL</button>
+            <button onClick={() => setShowInstallPrompt(false)} className="text-white/60">×</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Leaderboard, Achievements, Settings Modals (carried over) */}
 
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
@@ -781,7 +817,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ADVANCED PAUSE WITH COUNTDOWN • STATE PRESERVATION • ON BASE
+        PWA SUPPORT • INSTALL PROMPT • OFFLINE READY • ON BASE
       </footer>
     </div>
   );
