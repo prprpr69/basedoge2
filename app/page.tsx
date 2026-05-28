@@ -160,17 +160,6 @@ export default function BasedDodge() {
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [resizeCanvas]);
 
-  // PWA Install Prompt
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallPrompt(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
   useEffect(() => {
     const savedHigh = localStorage.getItem('basedDodgeHighScore');
     if (savedHigh) setHighScore(parseInt(savedHigh));
@@ -434,7 +423,8 @@ export default function BasedDodge() {
     ctx.restore();
 
     frameCount.current++;
-    if (frameCount.current % Math.max(5, Math.floor(25 / difficulty.current)) === 0) {
+    const spawnRate = Math.max(4, Math.floor(28 / difficulty.current));
+    if (frameCount.current % spawnRate === 0) {
       const w = 32 + Math.random() * 78;
       const h = 32 + Math.random() * 78;
       obstacles.current.push({
@@ -442,7 +432,7 @@ export default function BasedDodge() {
         y: -h - 70,
         width: w,
         height: h,
-        speed: (4.4 + difficulty.current * 1.85),
+        speed: (4.2 + difficulty.current * 1.92),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
         rotSpeed: (Math.random() - 0.5) * 0.29,
@@ -599,8 +589,8 @@ export default function BasedDodge() {
     ctx.shadowBlur = 0;
     ctx.fillText(`FPS ${fps}`, canvas.width - 110, 38);
 
-    if (score > 0 && score % 260 === 0) {
-      difficulty.current = Math.min(14.5, difficulty.current + 0.85);
+    if (score > 0 && score % 240 === 0) {
+      difficulty.current = Math.min(15.5, difficulty.current + 0.72);
       setCurrentLevel(l => l + 1);
       addToast(`WAVE ${currentLevel + 1} STARTED`, 'milestone');
     }
@@ -662,15 +652,6 @@ export default function BasedDodge() {
     if (joystickKnobRef.current) joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
   };
 
-  const installPWA = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-      setShowInstallPrompt(false);
-    }
-  };
-
   const finalScore = Math.floor(score * multiplier);
 
   return (
@@ -704,7 +685,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">PWA READY • INSTALLABLE • OFFLINE PLAY</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC DIFFICULTY CURVE • BALANCED PROGRESSION</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -778,22 +759,6 @@ export default function BasedDodge() {
         </AnimatePresence>
       </main>
 
-      {/* Install Prompt */}
-      <AnimatePresence>
-        {showInstallPrompt && deferredPrompt && (
-          <motion.div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] glass px-8 py-6 rounded-3xl flex items-center gap-6 shadow-2xl">
-            <div>
-              <div className="font-bold text-lg">Install BasedDodge</div>
-              <div className="text-sm text-white/70">Play offline • Add to home screen</div>
-            </div>
-            <button onClick={installPWA} className="px-8 py-3 bg-[#00F0FF] text-black font-bold rounded-2xl">INSTALL</button>
-            <button onClick={() => setShowInstallPrompt(false)} className="text-white/60">×</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Leaderboard, Achievements, Settings Modals (carried over) */}
-
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
@@ -817,7 +782,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        PWA SUPPORT • INSTALL PROMPT • OFFLINE READY • ON BASE
+        REFINED DIFFICULTY CURVE • SMOOTH PROGRESSION • ON BASE
       </footer>
     </div>
   );
