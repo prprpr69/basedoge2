@@ -40,6 +40,13 @@ interface PowerUp {
   life: number;
 }
 
+interface FloatingScore {
+  x: number;
+  y: number;
+  value: number;
+  life: number;
+}
+
 interface Achievement {
   id: string;
   name: string;
@@ -122,6 +129,7 @@ export default function BasedDodge() {
   const particles = useRef<Particle[]>([]);
   const trails = useRef<Trail[]>([]);
   const powerUps = useRef<PowerUp[]>([]);
+  const floatingScores = useRef<FloatingScore[]>([]);
   const keys = useRef<{ [key: string]: boolean }>({});
   const frameCount = useRef(0);
   const difficulty = useRef(1);
@@ -248,6 +256,7 @@ export default function BasedDodge() {
     particles.current = [];
     trails.current = [];
     powerUps.current = [];
+    floatingScores.current = [];
     frameCount.current = 0;
     difficulty.current = 1;
     shake.current = 0;
@@ -258,16 +267,6 @@ export default function BasedDodge() {
     frameCountRef.current = 0;
     gameLoop();
   }, [musicEnabled]);
-
-  const togglePause = () => {
-    if (!gameStarted) return;
-    if (!isPaused) {
-      setIsPaused(true);
-      setPauseCountdown(3);
-    } else {
-      setIsPaused(false);
-    }
-  };
 
   const endGame = useCallback(() => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -522,8 +521,9 @@ export default function BasedDodge() {
 
       if (obs.y > canvas.height + 140) {
         obstacles.current.splice(i, 1);
+        const points = 18;
         setScore(prev => {
-          const newScore = prev + 18;
+          const newScore = prev + points;
           const newCombo = combo + 1;
           setCombo(newCombo);
           comboTimer.current = 90;
@@ -531,7 +531,29 @@ export default function BasedDodge() {
           if (newMult !== multiplier) setMultiplier(newMult);
           return newScore;
         });
+        floatingScores.current.push({
+          x: obs.x + obs.width / 2,
+          y: obs.y,
+          value: points,
+          life: 55,
+        });
       }
+    }
+
+    // Floating scores
+    for (let i = floatingScores.current.length - 1; i >= 0; i--) {
+      const fs = floatingScores.current[i];
+      fs.y -= 1.2;
+      fs.life--;
+      ctx.save();
+      ctx.globalAlpha = fs.life / 55;
+      ctx.fillStyle = '#00F0FF';
+      ctx.font = 'bold 18px monospace';
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#00F0FF';
+      ctx.fillText(`+${fs.value}`, fs.x, fs.y);
+      ctx.restore();
+      if (fs.life <= 0) floatingScores.current.splice(i, 1);
     }
 
     if (comboTimer.current > 0) {
@@ -685,7 +707,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC DIFFICULTY CURVE • BALANCED PROGRESSION</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">FLOATING SCORE POPUPS • VISUAL FEEDBACK</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -782,7 +804,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        REFINED DIFFICULTY CURVE • SMOOTH PROGRESSION • ON BASE
+        FLOATING SCORE INDICATORS • BETTER FEEDBACK • ON BASE
       </footer>
     </div>
   );
