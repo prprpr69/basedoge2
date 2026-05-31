@@ -209,6 +209,35 @@ export default function BasedDodge() {
     confetti({ particleCount: 280, spread: 100, origin: { y: 0.6 }, colors: ['#0052FF', '#00F0FF', '#C724FF'] });
   };
 
+  const playHitSound = () => {
+    if (!soundEnabled || !audioContextRef.current) return;
+    const osc = audioContextRef.current.createOscillator();
+    const gain = audioContextRef.current.createGain();
+    const filter = audioContextRef.current.createBiquadFilter();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 180;
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    gain.gain.value = 0.3;
+    gain.gain.linearRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.4);
+    osc.connect(filter).connect(gain).connect(audioContextRef.current.destination);
+    osc.start();
+    osc.stop(audioContextRef.current.currentTime + 0.5);
+  };
+
+  const playPowerUpSound = () => {
+    if (!soundEnabled || !audioContextRef.current) return;
+    const osc = audioContextRef.current.createOscillator();
+    const gain = audioContextRef.current.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioContextRef.current.currentTime);
+    osc.frequency.linearRampToValueAtTime(1320, audioContextRef.current.currentTime + 0.6);
+    gain.gain.value = 0.25;
+    osc.connect(gain).connect(audioContextRef.current.destination);
+    osc.start();
+    osc.stop(audioContextRef.current.currentTime + 0.7);
+  };
+
   const initAudio = useCallback(() => {
     if (audioContextRef.current) return;
     audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -267,6 +296,16 @@ export default function BasedDodge() {
     frameCountRef.current = 0;
     gameLoop();
   }, [musicEnabled]);
+
+  const togglePause = () => {
+    if (!gameStarted) return;
+    if (!isPaused) {
+      setIsPaused(true);
+      setPauseCountdown(3);
+    } else {
+      setIsPaused(false);
+    }
+  };
 
   const endGame = useCallback(() => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -464,9 +503,11 @@ export default function BasedDodge() {
         if (pu.type === 'shield') {
           setShieldActive(true);
           addToast("SHIELD ACTIVATED!", 'milestone');
+          playPowerUpSound();
         } else {
           setSlowMoActive(true);
           addToast("SLOW-MO ACTIVATED!", 'milestone');
+          playPowerUpSound();
         }
         powerUpTimer.current = 420;
         powerUps.current.splice(i, 1);
@@ -540,7 +581,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Floating scores
     for (let i = floatingScores.current.length - 1; i >= 0; i--) {
       const fs = floatingScores.current[i];
       fs.y -= 1.2;
@@ -707,7 +747,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">FLOATING SCORE POPUPS • VISUAL FEEDBACK</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">RICH AUDIO FEEDBACK • IMMERSIVE SOUNDSCAPE</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -804,7 +844,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        FLOATING SCORE INDICATORS • BETTER FEEDBACK • ON BASE
+        IMMERSIVE AUDIO FEEDBACK • PROCEDURAL SFX • ON BASE
       </footer>
     </div>
   );
