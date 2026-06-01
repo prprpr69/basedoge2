@@ -633,6 +633,8 @@ export default function BasedDodge() {
     if (multiplier > 1) {
       ctx.fillStyle = '#C724FF';
       ctx.font = 'bold 26px monospace';
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = '#C724FF';
       ctx.fillText(`×${multiplier} COMBO ${combo}`, 48, 118);
     }
 
@@ -747,7 +749,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">RICH AUDIO FEEDBACK • IMMERSIVE SOUNDSCAPE</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">STREAK GLOW + MULTIPLIER VISUALS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -844,7 +846,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        IMMERSIVE AUDIO FEEDBACK • PROCEDURAL SFX • ON BASE
+        MULTIPLIER GLOW + STREAK VISUALS • ON BASE
       </footer>
     </div>
   );
