@@ -123,6 +123,8 @@ export default function BasedDodge() {
   const animationRef = useRef<number | null>(null);
   const lastFrameTime = useRef(Date.now());
   const frameCountRef = useRef(0);
+  const totalObstaclesDodged = useRef(0);
+  const startTime = useRef(Date.now());
 
   const player = useRef({ x: 460, y: 480, size: 32, speed: 9.4 });
   const obstacles = useRef<Obstacle[]>([]);
@@ -201,7 +203,8 @@ export default function BasedDodge() {
   };
 
   const shareToX = (finalScore: number) => {
-    const text = `Wave ${currentLevel} • ${finalScore} points in BasedDodge on Base ⚡`;
+    const timeSurvived = Math.floor((Date.now() - startTime.current) / 1000);
+    const text = `Survived ${timeSurvived}s reaching Wave ${currentLevel} with ${finalScore} points in BasedDodge on Base ⚡`;
     window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}%20${encodeURIComponent(window.location.href)}`, '_blank');
   };
 
@@ -280,6 +283,8 @@ export default function BasedDodge() {
     setShieldActive(false);
     setSlowMoActive(false);
     setCurrentLevel(1);
+    startTime.current = Date.now();
+    totalObstaclesDodged.current = 0;
     player.current = { x: 460, y: 480, size: 32, speed: 9.4 };
     obstacles.current = [];
     particles.current = [];
@@ -313,6 +318,7 @@ export default function BasedDodge() {
     stopBackgroundMusic();
 
     const finalScore = Math.floor(score * multiplier);
+    const timeSurvived = Math.floor((Date.now() - startTime.current) / 1000);
     setGameOver(true);
     setGameStarted(false);
     setIsPaused(false);
@@ -562,6 +568,7 @@ export default function BasedDodge() {
 
       if (obs.y > canvas.height + 140) {
         obstacles.current.splice(i, 1);
+        totalObstaclesDodged.current++;
         const points = 18;
         setScore(prev => {
           const newScore = prev + points;
@@ -717,6 +724,8 @@ export default function BasedDodge() {
   };
 
   const finalScore = Math.floor(score * multiplier);
+  const timeSurvived = gameOver ? Math.floor((Date.now() - startTime.current) / 1000) : 0;
+  const accuracy = totalObstaclesDodged.current > 0 ? Math.round((totalObstaclesDodged.current / (totalObstaclesDodged.current + 5)) * 100) : 0; // rough estimate
 
   return (
     <div className="min-h-screen bg-[#0A1429] text-white overflow-hidden relative">
@@ -749,7 +758,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">STREAK GLOW + MULTIPLIER VISUALS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DETAILED END-GAME STATS • REPLAY INSIGHTS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -807,11 +816,27 @@ export default function BasedDodge() {
               )}
 
               {gameOver && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl p-8">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 rounded-3xl p-8 text-center">
                   <div className="text-8xl mb-4">🏁</div>
                   <div className="text-6xl font-bold text-[#00F0FF] mb-2">MISSION COMPLETE</div>
-                  <div className="text-7xl font-mono mb-6 text-white">{finalScore}</div>
-                  <div className="text-xl mb-8">REACHED WAVE {currentLevel}</div>
+                  
+                  <div className="my-10 grid grid-cols-2 gap-x-12 gap-y-6 text-left max-w-md mx-auto font-mono">
+                    <div>FINAL SCORE</div>
+                    <div className="text-right text-5xl font-bold text-white">{finalScore}</div>
+                    
+                    <div>HIGHEST WAVE</div>
+                    <div className="text-right text-[#00F0FF] text-4xl">{currentLevel}</div>
+                    
+                    <div>TIME SURVIVED</div>
+                    <div className="text-right">{timeSurvived}s</div>
+                    
+                    <div>OBSTACLES DODGED</div>
+                    <div className="text-right">{totalObstaclesDodged.current}</div>
+                    
+                    <div>PEAK MULTIPLIER</div>
+                    <div className="text-right text-[#C724FF]">×{multiplier}</div>
+                  </div>
+
                   <div className="flex gap-4">
                     <button onClick={startGame} className="px-14 py-6 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-2xl font-bold">PLAY AGAIN</button>
                     <button onClick={() => shareToX(finalScore)} className="px-14 py-6 border-2 border-[#00F0FF] hover:bg-[#00F0FF] hover:text-black rounded-2xl text-2xl font-bold transition">SHARE ON X</button>
@@ -846,7 +871,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        MULTIPLIER GLOW + STREAK VISUALS • ON BASE
+        RICH END-GAME STATISTICS • REPLAY VALUE • ON BASE
       </footer>
     </div>
   );
