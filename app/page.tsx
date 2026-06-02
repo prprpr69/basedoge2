@@ -58,7 +58,7 @@ interface Achievement {
 interface Toast {
   id: number;
   message: string;
-  type: 'achievement' | 'milestone' | 'highscore';
+  type: 'achievement' | 'milestone' | 'highscore' | 'onchain';
 }
 
 interface LeaderboardEntry {
@@ -150,10 +150,10 @@ export default function BasedDodge() {
   const joystickCenter = useRef({ x: 0, y: 0 });
   const joystickVector = useRef({ x: 0, y: 0 });
 
-  const addToast = (message: string, type: 'achievement' | 'milestone' | 'highscore') => {
+  const addToast = (message: string, type: 'achievement' | 'milestone' | 'highscore' | 'onchain') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2600);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2800);
   };
 
   const resizeCanvas = useCallback(() => {
@@ -318,7 +318,6 @@ export default function BasedDodge() {
     stopBackgroundMusic();
 
     const finalScore = Math.floor(score * multiplier);
-    const timeSurvived = Math.floor((Date.now() - startTime.current) / 1000);
     setGameOver(true);
     setGameStarted(false);
     setIsPaused(false);
@@ -346,6 +345,7 @@ export default function BasedDodge() {
   const submitOnchainScore = async (finalScore: number) => {
     if (!address || finalScore < 200) return;
     setIsSubmitting(true);
+    addToast("SUBMITTING TO BASE...", 'onchain');
     try {
       await writeContract({
         address: HIGHSCORE_CONTRACT,
@@ -353,7 +353,10 @@ export default function BasedDodge() {
         functionName: 'setHighScore',
         args: [BigInt(finalScore)],
       });
-    } catch (e) {}
+      addToast("HIGH SCORE RECORDED ONCHAIN!", 'onchain');
+    } catch (e) {
+      addToast("ONCHAIN SUBMISSION FAILED", 'onchain');
+    }
     finally { setIsSubmitting(false); }
   };
 
@@ -725,7 +728,6 @@ export default function BasedDodge() {
 
   const finalScore = Math.floor(score * multiplier);
   const timeSurvived = gameOver ? Math.floor((Date.now() - startTime.current) / 1000) : 0;
-  const accuracy = totalObstaclesDodged.current > 0 ? Math.round((totalObstaclesDodged.current / (totalObstaclesDodged.current + 5)) * 100) : 0; // rough estimate
 
   return (
     <div className="min-h-screen bg-[#0A1429] text-white overflow-hidden relative">
@@ -758,7 +760,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">DETAILED END-GAME STATS • REPLAY INSIGHTS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">ONCHAIN SUBMISSION FEEDBACK • LIVE STATUS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -858,11 +860,12 @@ export default function BasedDodge() {
               exit={{ opacity: 0, x: 120, scale: 0.8 }}
               className={`glass px-6 py-4 rounded-2xl border-l-4 flex items-center gap-4 shadow-2xl max-w-xs ${
                 toast.type === 'achievement' ? 'border-[#C724FF]' : 
-                toast.type === 'highscore' ? 'border-[#00F0FF]' : 'border-white'
+                toast.type === 'highscore' ? 'border-[#00F0FF]' : 
+                toast.type === 'onchain' ? 'border-[#00F0FF]' : 'border-white'
               }`}
             >
               <span className="text-3xl">
-                {toast.type === 'achievement' ? '🏆' : toast.type === 'highscore' ? '🔥' : '🌟'}
+                {toast.type === 'achievement' ? '🏆' : toast.type === 'highscore' ? '🔥' : toast.type === 'onchain' ? '⛓️' : '🌟'}
               </span>
               <div className="font-medium">{toast.message}</div>
             </motion.div>
@@ -871,7 +874,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        RICH END-GAME STATISTICS • REPLAY VALUE • ON BASE
+        ONCHAIN SUBMISSION CONFIRMATION • LIVE FEEDBACK • ON BASE
       </footer>
     </div>
   );
