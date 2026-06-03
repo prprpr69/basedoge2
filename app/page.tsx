@@ -167,7 +167,17 @@ export default function BasedDodge() {
   useEffect(() => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+
+    const handler = (e: any) => {
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
   }, [resizeCanvas]);
 
   useEffect(() => {
@@ -177,6 +187,17 @@ export default function BasedDodge() {
     const savedAchievements = localStorage.getItem('basedDodgeAchievements');
     if (savedAchievements) setAchievements(JSON.parse(savedAchievements));
   }, []);
+
+  const installPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    setShowInstallPrompt(false);
+    setDeferredPrompt(null);
+    if (outcome === 'accepted') {
+      addToast("BASEDODGE INSTALLED! 🔥", 'milestone');
+    }
+  };
 
   const saveHighScore = (newScore: number) => {
     if (newScore > highScore) {
@@ -743,6 +764,9 @@ export default function BasedDodge() {
             <button onClick={() => setShowSettings(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">SETTINGS</button>
             <button onClick={() => setShowAchievements(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">ACHIEVEMENTS</button>
             <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">LEADERBOARD</button>
+            {showInstallPrompt && (
+              <button onClick={installPWA} className="px-6 py-2.5 text-sm font-medium bg-gradient-to-r from-[#00F0FF] to-[#0052FF] rounded-full">INSTALL APP</button>
+            )}
             <Wallet>
               <ConnectWallet />
               <WalletDropdown>
@@ -760,7 +784,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">ONCHAIN SUBMISSION FEEDBACK • LIVE STATUS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">PWA READY • INSTALLABLE • OFFLINE PLAY</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -874,7 +898,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ONCHAIN SUBMISSION CONFIRMATION • LIVE FEEDBACK • ON BASE
+        PWA ENABLED • INSTALL & PLAY OFFLINE • ON BASE
       </footer>
     </div>
   );
