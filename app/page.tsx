@@ -784,7 +784,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">POLISHED ACHIEVEMENTS MODAL</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">ENHANCED ONCHAIN LEADERBOARD</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -976,6 +976,59 @@ export default function BasedDodge() {
         )}
       </AnimatePresence>
 
+      {/* Enhanced Leaderboard Modal */}
+      <AnimatePresence>
+        {showLeaderboard && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-6"
+            onClick={() => setShowLeaderboard(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.88, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.88, y: 30 }}
+              className="glass w-full max-w-lg rounded-3xl p-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-4xl font-bold text-center mb-4 text-[#00F0FF]">ONCHAIN LEADERBOARD</h2>
+              <div className="text-center text-sm text-[#00F0FF] mb-8">TOP SURVIVORS ON BASE</div>
+              
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-3">
+                {leaderboard.map((entry, index) => {
+                  const isPlayer = address && entry.address.toLowerCase().includes(address.slice(0,6).toLowerCase());
+                  return (
+                    <motion.div 
+                      key={index} 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className={`flex items-center justify-between rounded-2xl px-6 py-4 ${isPlayer ? 'bg-[#00F0FF20] border border-[#00F0FF]' : 'bg-white/5'}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0052FF] to-[#00F0FF] flex items-center justify-center text-xs font-bold">{index + 1}</div>
+                        <div className="font-mono text-sm">{entry.address}</div>
+                      </div>
+                      <div className="font-bold text-[#00F0FF]">{entry.score.toLocaleString()}</div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {isConnected && (
+                <div className="mt-6 text-center text-xs text-white/70">
+                  Your onchain high score: {onchainHighScore ? Number(onchainHighScore).toLocaleString() : '—'}
+                </div>
+              )}
+
+              <button onClick={() => setShowLeaderboard(false)} className="mt-8 w-full py-5 bg-white/10 hover:bg-white/20 rounded-2xl text-xl font-bold">CLOSE LEADERBOARD</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
@@ -1000,7 +1053,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        POLISHED ACHIEVEMENTS • PROGRESS TRACKING • ON BASE
+        ENHANCED ONCHAIN LEADERBOARD • LIVE SYNC • ON BASE
       </footer>
     </div>
   );
