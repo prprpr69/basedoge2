@@ -31,6 +31,7 @@ interface Trail {
   x: number;
   y: number;
   life: number;
+  alpha: number;
 }
 
 interface PowerUp {
@@ -459,15 +460,21 @@ export default function BasedDodge() {
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
 
-    trails.current.push({ x: player.current.x, y: player.current.y + 12, life: 22 });
+    // Enhanced neon trails with multiple layers
+    trails.current.push({ x: player.current.x - 12, y: player.current.y + 18, life: 28, alpha: 0.9 });
+    trails.current.push({ x: player.current.x + 12, y: player.current.y + 18, life: 28, alpha: 0.9 });
+    trails.current.push({ x: player.current.x, y: player.current.y + 26, life: 18, alpha: 0.6 });
+
     for (let i = trails.current.length - 1; i >= 0; i--) {
       const t = trails.current[i];
-      t.life -= 1.1;
+      t.life -= 1.25;
       if (t.life <= 0) { trails.current.splice(i, 1); continue; }
       ctx.save();
-      ctx.globalAlpha = t.life / 26;
+      ctx.globalAlpha = (t.life / 28) * t.alpha;
       ctx.fillStyle = '#00F0FF';
-      ctx.fillRect(t.x - 7, t.y, 14, 9);
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = '#00F0FF';
+      ctx.fillRect(t.x - 6, t.y, 12, 18);
       ctx.restore();
     }
 
@@ -476,7 +483,7 @@ export default function BasedDodge() {
 
     ctx.save();
     ctx.translate(player.current.x + shakeX, player.current.y + shakeY);
-    ctx.shadowBlur = 78;
+    ctx.shadowBlur = 88;
     ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
@@ -488,12 +495,25 @@ export default function BasedDodge() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.shadowBlur = 38;
+    ctx.shadowBlur = 42;
     ctx.fillStyle = '#0052FF';
     ctx.beginPath();
     ctx.arc(0, -15, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    // Engine burst particles when moving
+    if (Math.random() < 0.45) {
+      particles.current.push({
+        x: player.current.x,
+        y: player.current.y + 28,
+        vx: (Math.random() - 0.5) * 3.5,
+        vy: 4 + Math.random() * 4,
+        life: 22,
+        color: '#00F0FF',
+        size: 4.5,
+      });
+    }
 
     frameCount.current++;
     const spawnRate = Math.max(4, Math.floor(28 / difficulty.current));
@@ -789,7 +809,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">CINEMATIC INTRO SEQUENCE • NEON LAUNCH</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">ADVANCED NEON TRAILS + SHIP GLOW</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1091,7 +1111,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        CINEMATIC INTRO • NEON LAUNCH SEQUENCE • ON BASE
+        ADVANCED NEON TRAILS + SHIP GLOW • ON BASE
       </footer>
     </div>
   );
