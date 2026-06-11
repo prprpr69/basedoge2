@@ -460,7 +460,6 @@ export default function BasedDodge() {
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
 
-    // Enhanced neon trails with multiple layers
     trails.current.push({ x: player.current.x - 12, y: player.current.y + 18, life: 28, alpha: 0.9 });
     trails.current.push({ x: player.current.x + 12, y: player.current.y + 18, life: 28, alpha: 0.9 });
     trails.current.push({ x: player.current.x, y: player.current.y + 26, life: 18, alpha: 0.6 });
@@ -502,7 +501,6 @@ export default function BasedDodge() {
     ctx.fill();
     ctx.restore();
 
-    // Engine burst particles when moving
     if (Math.random() < 0.45) {
       particles.current.push({
         x: player.current.x,
@@ -624,8 +622,26 @@ export default function BasedDodge() {
           const newCombo = combo + 1;
           setCombo(newCombo);
           comboTimer.current = 90;
+
           const newMult = Math.min(5, Math.floor(newCombo / 8) + 1);
-          if (newMult !== multiplier) setMultiplier(newMult);
+          if (newMult !== multiplier) {
+            setMultiplier(newMult);
+            // Combo burst
+            if (newMult >= 3) {
+              for (let k = 0; k < 36; k++) {
+                const angle = Math.random() * Math.PI * 2;
+                particles.current.push({
+                  x: player.current.x,
+                  y: player.current.y - 20,
+                  vx: Math.cos(angle) * (3 + Math.random() * 6),
+                  vy: Math.sin(angle) * (3 + Math.random() * 6) - 4,
+                  life: 48,
+                  color: '#C724FF',
+                  size: 6,
+                });
+              }
+            }
+          }
           return newScore;
         });
         floatingScores.current.push({
@@ -809,7 +825,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">ADVANCED NEON TRAILS + SHIP GLOW</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">COMBO PARTICLE BURSTS + MULTIPLIER FLAIR</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1111,7 +1127,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        ADVANCED NEON TRAILS + SHIP GLOW • ON BASE
+        COMBO PARTICLE BURSTS + MULTIPLIER VISUALS • ON BASE
       </footer>
     </div>
   );
