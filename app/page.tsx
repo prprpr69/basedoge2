@@ -145,6 +145,7 @@ export default function BasedDodge() {
   const engineOscRef = useRef<OscillatorNode | null>(null);
   const musicOscRef = useRef<OscillatorNode | null>(null);
   const musicGainRef = useRef<GainNode | null>(null);
+  const musicFilterRef = useRef<BiquadFilterNode | null>(null);
 
   const joystickRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
@@ -285,12 +286,22 @@ export default function BasedDodge() {
     osc.start();
     musicOscRef.current = osc;
     musicGainRef.current = gain;
+    musicFilterRef.current = filter;
+  };
+
+  const updateMusicIntensity = () => {
+    if (!musicOscRef.current || !musicFilterRef.current) return;
+    const intensity = Math.min(1, (currentLevel - 1) * 0.12 + (multiplier - 1) * 0.25);
+    musicOscRef.current.frequency.setTargetAtTime(62 + intensity * 38, audioContextRef.current!.currentTime, 0.3);
+    musicFilterRef.current.frequency.setTargetAtTime(280 + intensity * 420, audioContextRef.current!.currentTime, 0.4);
   };
 
   const stopBackgroundMusic = () => {
     if (musicOscRef.current) {
       musicOscRef.current.stop();
       musicOscRef.current = null;
+      musicGainRef.current = null;
+      musicFilterRef.current = null;
     }
   };
 
@@ -728,7 +739,10 @@ export default function BasedDodge() {
       difficulty.current = Math.min(15.5, difficulty.current + 0.68);
       setCurrentLevel(l => l + 1);
       addToast(`WAVE ${currentLevel + 1} STARTED`, 'milestone');
+      updateMusicIntensity();
     }
+
+    updateMusicIntensity();
 
     if (shake.current > 0) shake.current *= 0.74;
 
@@ -824,7 +838,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">REFINED DIFFICULTY CURVE + SMOOTH WAVES</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC MUSIC INTENSITY + WAVE SYNC</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1126,7 +1140,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        REFINED DIFFICULTY + SMOOTH PROGRESSION • ON BASE
+        DYNAMIC MUSIC INTENSITY + WAVE SYNC • ON BASE
       </footer>
     </div>
   );
