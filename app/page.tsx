@@ -590,20 +590,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Power-up timer indicators
-    if (shieldActive || slowMoActive) {
-      const timerProgress = powerUpTimer.current / 420;
-      ctx.save();
-      ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
-      ctx.lineWidth = 8;
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
-      ctx.beginPath();
-      ctx.arc(player.current.x + shakeX, player.current.y + shakeY - 68, 22, -Math.PI / 2, -Math.PI / 2 + timerProgress * Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
     for (let i = obstacles.current.length - 1; i >= 0; i--) {
       const obs = obstacles.current[i];
       obs.y += obs.speed;
@@ -734,6 +720,23 @@ export default function BasedDodge() {
       ctx.fillText(`×${multiplier} COMBO ${combo}`, 48, 118);
     }
 
+    // HUD Power-up Indicators
+    const timerProgress = powerUpTimer.current > 0 ? powerUpTimer.current / 420 : 0;
+    if (shieldActive || slowMoActive) {
+      ctx.save();
+      ctx.strokeStyle = shieldActive ? '#C724FF' : '#00F0FF';
+      ctx.lineWidth = 7;
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = shieldActive ? '#C724FF' : '#00F0FF';
+      ctx.beginPath();
+      ctx.arc(120, 140, 18, -Math.PI / 2, -Math.PI / 2 + timerProgress * Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText(shieldActive ? 'SHIELD' : 'SLOW', 98, 145);
+      ctx.restore();
+    }
+
     if (shieldActive) {
       ctx.strokeStyle = '#C724FF';
       ctx.lineWidth = 6;
@@ -852,7 +855,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">POWER-UP TIMER INDICATORS + VISUALS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">HUD POWER-UP TIMERS + ICONS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1154,7 +1157,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-       . POWER-UP TIMERS + ACTIVATION VISUALS • ON BASE
+        HUD POWER-UP TIMERS + VISUAL INDICATORS • ON BASE
       </footer>
     </div>
   );
