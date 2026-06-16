@@ -152,6 +152,7 @@ export default function BasedDodge() {
   const isDraggingJoystick = useRef(false);
   const joystickCenter = useRef({ x: 0, y: 0 });
   const joystickVector = useRef({ x: 0, y: 0 });
+  const joystickDeadzone = 0.18;
 
   const addToast = (message: string, type: 'achievement' | 'milestone' | 'highscore' | 'onchain') => {
     const id = Date.now();
@@ -459,8 +460,14 @@ export default function BasedDodge() {
     if (keys.current['ArrowUp'] || keys.current['w'] || keys.current['W']) moveY -= 1;
     if (keys.current['ArrowDown'] || keys.current['s'] || keys.current['S']) moveY += 1;
 
-    moveX += joystickVector.current.x * 1.1;
-    moveY += joystickVector.current.y * 1.1;
+    let joyX = joystickVector.current.x;
+    let joyY = joystickVector.current.y;
+    const joyMag = Math.sqrt(joyX * joyX + joyY * joyY);
+    if (joyMag > joystickDeadzone) {
+      const norm = (joyMag - joystickDeadzone) / (1 - joystickDeadzone);
+      moveX += joyX / joyMag * norm;
+      moveY += joyY / joyMag * norm;
+    }
 
     const moveLength = Math.sqrt(moveX * moveX + moveY * moveY) || 1;
     const normX = moveX / moveLength;
@@ -720,7 +727,6 @@ export default function BasedDodge() {
       ctx.fillText(`×${multiplier} COMBO ${combo}`, 48, 118);
     }
 
-    // HUD Power-up Indicators
     const timerProgress = powerUpTimer.current > 0 ? powerUpTimer.current / 420 : 0;
     if (shieldActive || slowMoActive) {
       ctx.save();
@@ -814,7 +820,13 @@ export default function BasedDodge() {
       dx = (dx / dist) * maxDist;
       dy = (dy / dist) * maxDist;
     }
-    joystickVector.current = { x: dx / maxDist, y: dy / maxDist };
+    const mag = Math.sqrt(dx * dx + dy * dy) / maxDist;
+    if (mag > joystickDeadzone) {
+      const norm = (mag - joystickDeadzone) / (1 - joystickDeadzone);
+      joystickVector.current = { x: (dx / maxDist) * norm, y: (dy / maxDist) * norm };
+    } else {
+      joystickVector.current = { x: 0, y: 0 };
+    }
     if (joystickKnobRef.current) joystickKnobRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
   };
 
@@ -855,7 +867,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">HUD POWER-UP TIMERS + ICONS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">POLISHED MOBILE JOYSTICK + DEADZONE</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1157,7 +1169,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        HUD POWER-UP TIMERS + VISUAL INDICATORS • ON BASE
+        REFINED MOBILE JOYSTICK + DEADZONE • ON BASE
       </footer>
     </div>
   );
