@@ -48,6 +48,14 @@ interface FloatingScore {
   life: number;
 }
 
+interface Star {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  alpha: number;
+}
+
 interface Achievement {
   id: string;
   name: string;
@@ -134,6 +142,7 @@ export default function BasedDodge() {
   const trails = useRef<Trail[]>([]);
   const powerUps = useRef<PowerUp[]>([]);
   const floatingScores = useRef<FloatingScore[]>([]);
+  const stars = useRef<Star[]>([]);
   const keys = useRef<{ [key: string]: boolean }>({});
   const frameCount = useRef(0);
   const difficulty = useRef(1);
@@ -306,12 +315,26 @@ export default function BasedDodge() {
     }
   };
 
+  const initStarfield = () => {
+    stars.current = [];
+    for (let i = 0; i < 180; i++) {
+      stars.current.push({
+        x: Math.random() * 920,
+        y: Math.random() * 640,
+        size: Math.random() * 2.2 + 0.6,
+        speed: Math.random() * 1.8 + 0.6,
+        alpha: Math.random() * 0.7 + 0.3,
+      });
+    }
+  };
+
   const startGame = useCallback(() => {
     setShowIntro(true);
     setTimeout(() => {
       setShowIntro(false);
       initAudio();
       startBackgroundMusic();
+      initStarfield();
       setGameStarted(true);
       setGameOver(false);
       setIsPaused(false);
@@ -446,8 +469,22 @@ export default function BasedDodge() {
       lastFrameTime.current = now;
     }
 
-    ctx.fillStyle = 'rgba(10, 20, 41, 0.92)';
+    ctx.fillStyle = 'rgba(10, 20, 41, 0.94)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Parallax Starfield
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = stars.current.length - 1; i >= 0; i--) {
+      const star = stars.current[i];
+      star.y += star.speed * (slowMoActive ? 0.4 : 1);
+      if (star.y > canvas.height) {
+        star.y = 0;
+        star.x = Math.random() * canvas.width;
+      }
+      ctx.globalAlpha = star.alpha;
+      ctx.fillRect(star.x, star.y, star.size, star.size);
+    }
+    ctx.globalAlpha = 1.0;
 
     ctx.strokeStyle = 'rgba(0, 82, 255, 0.32)';
     ctx.lineWidth = 1.5;
@@ -867,7 +904,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">POLISHED MOBILE JOYSTICK + DEADZONE</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">PARALLAX STARFIELD BACKGROUND</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1169,7 +1206,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        REFINED MOBILE JOYSTICK + DEADZONE • ON BASE
+        PARALLAX STARFIELD + DEPTH • ON BASE
       </footer>
     </div>
   );
