@@ -149,6 +149,7 @@ export default function BasedDodge() {
   const shake = useRef(0);
   const comboTimer = useRef(0);
   const powerUpTimer = useRef(0);
+  const gridPulse = useRef(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const engineOscRef = useRef<OscillatorNode | null>(null);
@@ -356,6 +357,7 @@ export default function BasedDodge() {
       difficulty.current = 1;
       shake.current = 0;
       comboTimer.current = 0;
+      gridPulse.current = 0;
       joystickVector.current = { x: 0, y: 0 };
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       lastFrameTime.current = Date.now();
@@ -486,10 +488,25 @@ export default function BasedDodge() {
     }
     ctx.globalAlpha = 1.0;
 
-    ctx.strokeStyle = 'rgba(0, 82, 255, 0.32)';
-    ctx.lineWidth = 1.5;
-    for (let x = 18; x < canvas.width; x += 36) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-    for (let y = 18; y < canvas.height; y += 36) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    // Neon Grid with Pulse
+    gridPulse.current = (gridPulse.current + 0.085) % (Math.PI * 2);
+    const pulse = Math.sin(gridPulse.current) * 0.5 + 0.5;
+    const gridAlpha = 0.28 + pulse * 0.22;
+    ctx.strokeStyle = `rgba(0, 240, 255, ${gridAlpha})`;
+    ctx.lineWidth = 1.5 + pulse * 0.8;
+
+    for (let x = 18; x < canvas.width; x += 36) { 
+      ctx.beginPath(); 
+      ctx.moveTo(x, 0); 
+      ctx.lineTo(x, canvas.height); 
+      ctx.stroke(); 
+    }
+    for (let y = 18; y < canvas.height; y += 36) { 
+      ctx.beginPath(); 
+      ctx.moveTo(0, y); 
+      ctx.lineTo(canvas.width, y); 
+      ctx.stroke(); 
+    }
 
     let moveX = 0, moveY = 0;
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) moveX -= 1;
@@ -904,7 +921,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">PARALLAX STARFIELD BACKGROUND</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">NEON GRID PULSE ANIMATION</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1206,7 +1223,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        PARALLAX STARFIELD + DEPTH • ON BASE
+        NEON GRID PULSE + WAVE SYNC • ON BASE
       </footer>
     </div>
   );
