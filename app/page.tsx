@@ -106,6 +106,7 @@ export default function BasedDodge() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [waveFlash, setWaveFlash] = useState(0);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -345,6 +346,7 @@ export default function BasedDodge() {
       setShieldActive(false);
       setSlowMoActive(false);
       setCurrentLevel(1);
+      setWaveFlash(0);
       startTime.current = Date.now();
       totalObstaclesDodged.current = 0;
       player.current = { x: 460, y: 480, size: 32, speed: 9.4 };
@@ -506,6 +508,14 @@ export default function BasedDodge() {
       ctx.moveTo(0, y); 
       ctx.lineTo(canvas.width, y); 
       ctx.stroke(); 
+    }
+
+    // Wave Flash Overlay
+    if (waveFlash > 0) {
+      ctx.save();
+      ctx.fillStyle = `rgba(0, 240, 255, ${waveFlash * 0.35})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
     }
 
     let moveX = 0, moveY = 0;
@@ -814,9 +824,28 @@ export default function BasedDodge() {
 
     if (score > 0 && score % 240 === 0) {
       difficulty.current = Math.min(15.5, difficulty.current + 0.68);
-      setCurrentLevel(l => l + 1);
-      addToast(`WAVE ${currentLevel + 1} STARTED`, 'milestone');
+      const newLevel = currentLevel + 1;
+      setCurrentLevel(newLevel);
+      setWaveFlash(1.0);
+      addToast(`WAVE ${newLevel} STARTED`, 'milestone');
       updateMusicIntensity();
+      // Wave flash particles
+      for (let k = 0; k < 60; k++) {
+        particles.current.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height * 0.6,
+          vx: (Math.random() - 0.5) * 12,
+          vy: (Math.random() - 0.5) * 8,
+          life: 38,
+          color: '#00F0FF',
+          size: 3.5,
+        });
+      }
+    }
+
+    // Decay wave flash
+    if (waveFlash > 0) {
+      setWaveFlash(Math.max(0, waveFlash - 0.042));
     }
 
     updateMusicIntensity();
@@ -824,7 +853,7 @@ export default function BasedDodge() {
     if (shake.current > 0) shake.current *= 0.74;
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame]);
+  }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame, waveFlash]);
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => {
@@ -921,7 +950,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">NEON GRID PULSE ANIMATION</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">WAVE FLASH + LEVEL-UP FEEDBACK</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1223,7 +1252,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        NEON GRID PULSE + WAVE SYNC • ON BASE
+        WAVE FLASH INDICATORS + LEVEL-UP FX • ON BASE
       </footer>
     </div>
   );
