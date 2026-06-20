@@ -562,6 +562,20 @@ export default function BasedDodge() {
     const shakeX = shake.current * (Math.random() - 0.5) * 1.6;
     const shakeY = shake.current * (Math.random() - 0.5) * 1.2;
 
+    // Enhanced Thrust Particles
+    const thrustIntensity = 0.6 + (multiplier - 1) * 0.25;
+    if (Math.random() < 0.65 * thrustIntensity) {
+      particles.current.push({
+        x: player.current.x - 18 + Math.random() * 36,
+        y: player.current.y + 32,
+        vx: (Math.random() - 0.5) * 4.5,
+        vy: 5 + Math.random() * 7,
+        life: 26 + Math.random() * 12,
+        color: '#00F0FF',
+        size: 5 + Math.random() * 3,
+      });
+    }
+
     ctx.save();
     ctx.translate(player.current.x + shakeX, player.current.y + shakeY);
     ctx.shadowBlur = 88;
@@ -829,7 +843,6 @@ export default function BasedDodge() {
       setWaveFlash(1.0);
       addToast(`WAVE ${newLevel} STARTED`, 'milestone');
       updateMusicIntensity();
-      // Wave flash particles
       for (let k = 0; k < 60; k++) {
         particles.current.push({
           x: Math.random() * canvas.width,
@@ -843,7 +856,6 @@ export default function BasedDodge() {
       }
     }
 
-    // Decay wave flash
     if (waveFlash > 0) {
       setWaveFlash(Math.max(0, waveFlash - 0.042));
     }
@@ -950,7 +962,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">WAVE FLASH + LEVEL-UP FEEDBACK</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC ENGINE THRUST PARTICLES</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1252,7 +1264,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        WAVE FLASH INDICATORS + LEVEL-UP FX • ON BASE
+        ENHANCED ENGINE THRUST + INTENSITY • ON BASE
       </footer>
     </div>
   );
