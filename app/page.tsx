@@ -703,7 +703,7 @@ export default function BasedDodge() {
           continue;
         } else {
           createExplosion(player.current.x, player.current.y, true);
-          shake.current = 32; // Stronger impact shake
+          shake.current = 32;
           endGame();
           return;
         }
@@ -723,18 +723,20 @@ export default function BasedDodge() {
           if (newMult !== multiplier) {
             setMultiplier(newMult);
             if (newMult >= 3) {
-              for (let k = 0; k < 36; k++) {
+              // Victory combo bursts
+              for (let k = 0; k < 48; k++) {
                 const angle = Math.random() * Math.PI * 2;
                 particles.current.push({
                   x: player.current.x,
                   y: player.current.y - 20,
-                  vx: Math.cos(angle) * (3 + Math.random() * 6),
-                  vy: Math.sin(angle) * (3 + Math.random() * 6) - 4,
-                  life: 48,
+                  vx: Math.cos(angle) * (4 + Math.random() * 9),
+                  vy: Math.sin(angle) * (4 + Math.random() * 9) - 6,
+                  life: 55,
                   color: '#C724FF',
-                  size: 6,
+                  size: 5.5 + Math.random() * 4,
                 });
               }
+              triggerConfetti();
             }
           }
           return newScore;
@@ -962,7 +964,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">IMPACT SHAKE + EXPLOSIVE PARTICLES</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">VICTORY COMBO BURSTS + PARTICLES</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1264,7 +1266,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        INTENSE IMPACT SHAKE + PARTICLES • ON BASE
+        VICTORY COMBO BURSTS + EXPLOSIONS • ON BASE
       </footer>
     </div>
   );
