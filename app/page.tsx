@@ -579,6 +579,20 @@ export default function BasedDodge() {
       });
     }
 
+    // Shield Particle Aura
+    if (shieldActive && Math.random() < 0.75) {
+      const angle = Math.random() * Math.PI * 2;
+      particles.current.push({
+        x: player.current.x + Math.cos(angle) * 52,
+        y: player.current.y + Math.sin(angle) * 52 - 8,
+        vx: Math.cos(angle) * (1.2 + Math.random()),
+        vy: Math.sin(angle) * (1.2 + Math.random()),
+        life: 24,
+        color: '#C724FF',
+        size: 4.5,
+      });
+    }
+
     ctx.save();
     ctx.translate(player.current.x + shakeX, player.current.y + shakeY);
     ctx.shadowBlur = 88;
@@ -966,7 +980,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">MULTIPLIER GLOW TRAILS + VISUALS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">SHIELD PARTICLE AURA + EFFECTS</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1268,7 +1282,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        MULTIPLIER GLOW TRAILS + COMBO FX • ON BASE
+        SHIELD AURA PARTICLES + VISUALS • ON BASE
       </footer>
     </div>
   );
