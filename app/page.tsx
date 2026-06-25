@@ -477,11 +477,11 @@ export default function BasedDodge() {
     ctx.fillStyle = 'rgba(10, 20, 41, 0.94)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Parallax Starfield
+    // Parallax Starfield (slowed in slow-mo)
     ctx.fillStyle = '#FFFFFF';
     for (let i = stars.current.length - 1; i >= 0; i--) {
       const star = stars.current[i];
-      star.y += star.speed * (slowMoActive ? 0.4 : 1);
+      star.y += star.speed * (slowMoActive ? 0.35 : 1);
       if (star.y > canvas.height) {
         star.y = 0;
         star.x = Math.random() * canvas.width;
@@ -537,8 +537,9 @@ export default function BasedDodge() {
     const moveLength = Math.sqrt(moveX * moveX + moveY * moveY) || 1;
     const normX = moveX / moveLength;
     const normY = moveY / moveLength;
-    player.current.x += normX * player.current.speed;
-    player.current.y += normY * player.current.speed * 0.85;
+    const effectiveSpeed = slowMoActive ? player.current.speed * 0.65 : player.current.speed;
+    player.current.x += normX * effectiveSpeed;
+    player.current.y += normY * effectiveSpeed * 0.85;
 
     player.current.x = Math.max(38, Math.min(canvas.width - 38, player.current.x));
     player.current.y = Math.max(95, Math.min(canvas.height - 75, player.current.y));
@@ -551,10 +552,10 @@ export default function BasedDodge() {
 
     for (let i = trails.current.length - 1; i >= 0; i--) {
       const t = trails.current[i];
-      t.life -= 1.25;
+      t.life -= slowMoActive ? 0.8 : 1.25;
       if (t.life <= 0) { trails.current.splice(i, 1); continue; }
       ctx.save();
-      ctx.globalAlpha = (t.life / 28) * t.alpha;
+      ctx.globalAlpha = (t.life / 28) * t.alpha * (slowMoActive ? 0.75 : 1);
       ctx.fillStyle = t.color || '#00F0FF';
       ctx.shadowBlur = 28;
       ctx.shadowColor = t.color || '#00F0FF';
@@ -636,7 +637,7 @@ export default function BasedDodge() {
         y: -h - 70,
         width: w,
         height: h,
-        speed: (4.2 + difficulty.current * 1.92),
+        speed: (4.2 + difficulty.current * 1.92) * (slowMoActive ? 0.55 : 1),
         color: ['#C724FF', '#FF2D55', '#00F0FF'][Math.floor(Math.random() * 3)],
         rotation: 0,
         rotSpeed: (Math.random() - 0.5) * 0.29,
@@ -647,7 +648,7 @@ export default function BasedDodge() {
 
     for (let i = powerUps.current.length - 1; i >= 0; i--) {
       const pu = powerUps.current[i];
-      pu.y += 3.2;
+      pu.y += 3.2 * (slowMoActive ? 0.6 : 1);
       pu.life--;
 
       ctx.save();
@@ -791,9 +792,9 @@ export default function BasedDodge() {
     for (let i = particles.current.length - 1; i >= 0; i--) {
       const p = particles.current[i];
       p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.26;
-      p.life -= 1.35;
+      p.y += p.vy * (slowMoActive ? 0.55 : 1);
+      p.vy += 0.26 * (slowMoActive ? 0.55 : 1);
+      p.life -= 1.35 * (slowMoActive ? 0.8 : 1);
       p.size *= 0.945;
       ctx.save();
       ctx.globalAlpha = p.life / 62;
@@ -980,7 +981,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">SHIELD PARTICLE AURA + EFFECTS</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">SLOW-MO DISTORTION + VISUAL FX</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1282,7 +1283,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        SHIELD AURA PARTICLES + VISUALS • ON BASE
+        SLOW-MO DISTORTION + VISUAL FX • ON BASE
       </footer>
     </div>
   );
