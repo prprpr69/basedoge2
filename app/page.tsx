@@ -108,6 +108,7 @@ export default function BasedDodge() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [waveFlash, setWaveFlash] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -915,6 +916,7 @@ export default function BasedDodge() {
     const kd = (e: KeyboardEvent) => {
       keys.current[e.key] = true;
       if (e.key === 'p' || e.key === 'P') togglePause();
+      if (e.key === 'h' || e.key === 'H') setShowHelp(true);
     };
     const ku = (e: KeyboardEvent) => keys.current[e.key] = false;
 
@@ -1006,7 +1008,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">POLISHED PAUSE MENU</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">KEYBOARD SHORTCUTS HELP</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1096,6 +1098,7 @@ export default function BasedDodge() {
                       setTimeout(() => setIsPaused(false), 3000);
                     }} className="px-16 py-6 bg-white/10 hover:bg-white/20 rounded-2xl text-2xl font-bold mb-4">RESUME GAME</button>
                     <button onClick={() => { setIsPaused(false); setGameStarted(false); }} className="px-16 py-6 bg-white/10 hover:bg-white/20 rounded-2xl text-2xl font-bold">MAIN MENU</button>
+                    <button onClick={() => setShowHelp(true)} className="mt-6 text-sm underline">KEYBOARD SHORTCUTS</button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1291,6 +1294,35 @@ export default function BasedDodge() {
         )}
       </AnimatePresence>
 
+      {/* Keyboard Help Overlay */}
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-6"
+            onClick={() => setShowHelp(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.88, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.88, y: 30 }}
+              className="glass max-w-md w-full rounded-3xl p-10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-3xl font-bold text-center mb-8 text-[#00F0FF]">KEYBOARD SHORTCUTS</h2>
+              <div className="space-y-6 text-left font-mono text-sm">
+                <div className="flex justify-between"><span>P / ESC</span><span>PAUSE / RESUME</span></div>
+                <div className="flex justify-between"><span>ARROW KEYS / WASD</span><span>MOVE SHIP</span></div>
+                <div className="flex justify-between"><span>H</span><span>SHOW THIS HELP</span></div>
+              </div>
+              <button onClick={() => setShowHelp(false)} className="mt-10 w-full py-5 bg-white/10 hover:bg-white/20 rounded-2xl text-xl font-bold">CLOSE HELP</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
@@ -1315,7 +1347,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        POLISHED PAUSE MENU + ANIMATION • ON BASE
+        KEYBOARD SHORTCUTS HELP • ON BASE
       </footer>
     </div>
   );
