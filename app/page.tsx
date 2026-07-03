@@ -702,6 +702,19 @@ export default function BasedDodge() {
       obs.y += obs.speed;
       obs.rotation += obs.rotSpeed;
 
+      // Obstacle Trailing Glow Particles
+      if (Math.random() < 0.45) {
+        particles.current.push({
+          x: obs.x + Math.random() * obs.width,
+          y: obs.y + obs.height / 2,
+          vx: (Math.random() - 0.5) * 2,
+          vy: 2 + Math.random() * 3,
+          life: 18,
+          color: obs.color,
+          size: 4 + Math.random() * 3,
+        });
+      }
+
       ctx.save();
       ctx.translate(obs.x + obs.width/2, obs.y + obs.height/2);
       ctx.rotate(obs.rotation);
@@ -1008,7 +1021,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">KEYBOARD SHORTCUTS HELP</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">OBSTACLE TRAILING GLOW</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1347,7 +1360,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        KEYBOARD SHORTCUTS HELP • ON BASE
+        OBSTACLE TRAILING GLOW • ON BASE
       </footer>
     </div>
   );
