@@ -109,6 +109,7 @@ export default function BasedDodge() {
   const [showIntro, setShowIntro] = useState(false);
   const [waveFlash, setWaveFlash] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
+  const [powerUpFlash, setPowerUpFlash] = useState(0);
 
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: 'survivor', name: 'SURVIVOR', desc: 'Reach 500 points', unlocked: false, scoreRequired: 500 },
@@ -523,6 +524,14 @@ export default function BasedDodge() {
       ctx.restore();
     }
 
+    // Power-up Flash Overlay
+    if (powerUpFlash > 0) {
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 240, 200, ${powerUpFlash * 0.4})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    }
+
     let moveX = 0, moveY = 0;
     if (keys.current['ArrowLeft'] || keys.current['a'] || keys.current['A']) moveX -= 1;
     if (keys.current['ArrowRight'] || keys.current['d'] || keys.current['D']) moveX += 1;
@@ -683,6 +692,7 @@ export default function BasedDodge() {
         powerUpTimer.current = 420;
         powerUps.current.splice(i, 1);
         createExplosion(pu.x, pu.y, false);
+        setPowerUpFlash(1.0);
         continue;
       }
 
@@ -918,12 +928,16 @@ export default function BasedDodge() {
       setWaveFlash(Math.max(0, waveFlash - 0.042));
     }
 
+    if (powerUpFlash > 0) {
+      setPowerUpFlash(Math.max(0, powerUpFlash - 0.085));
+    }
+
     updateMusicIntensity();
 
     if (shake.current > 0) shake.current *= 0.74;
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame, waveFlash, isConnected]);
+  }, [score, multiplier, combo, isPaused, slowMoActive, graphicsQuality, fps, currentLevel, endGame, waveFlash, isConnected, powerUpFlash]);
 
   useEffect(() => {
     const kd = (e: KeyboardEvent) => {
@@ -1021,7 +1035,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">OBSTACLE TRAILING GLOW</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">POWER-UP COLLECTION FLASH</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1360,7 +1374,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        OBSTACLE TRAILING GLOW • ON BASE
+        POWER-UP COLLECTION FLASH • ON BASE
       </footer>
     </div>
   );
