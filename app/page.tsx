@@ -576,8 +576,10 @@ export default function BasedDodge() {
       ctx.restore();
     }
 
-    const shakeX = shake.current * (Math.random() - 0.5) * 1.6;
-    const shakeY = shake.current * (Math.random() - 0.5) * 1.2;
+    // Dynamic shake intensity based on multiplier and level
+    const dynamicShake = shake.current * (1 + (multiplier - 1) * 0.6 + (currentLevel - 1) * 0.1);
+    const shakeX = dynamicShake * (Math.random() - 0.5) * 1.6;
+    const shakeY = dynamicShake * (Math.random() - 0.5) * 1.2;
 
     // Enhanced Thrust Particles
     const thrustIntensity = 0.6 + (multiplier - 1) * 0.25;
@@ -748,7 +750,7 @@ export default function BasedDodge() {
           continue;
         } else {
           createExplosion(player.current.x, player.current.y, true);
-          shake.current = 32;
+          shake.current = 42;
           endGame();
           return;
         }
@@ -1035,7 +1037,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">POWER-UP COLLECTION FLASH</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">DYNAMIC SHAKE INTENSITY</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1374,7 +1376,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        POWER-UP COLLECTION FLASH • ON BASE
+        SHAKE INTENSITY SCALING • ON BASE
       </footer>
     </div>
   );
