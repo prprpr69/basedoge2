@@ -1013,6 +1013,8 @@ export default function BasedDodge() {
 
   const finalScore = Math.floor(score * multiplier);
   const timeSurvived = gameOver ? Math.floor((Date.now() - startTime.current) / 1000) : 0;
+  const localHS = highScore;
+  const onchainHS = onchainHighScore ? Number(onchainHighScore) : 0;
 
   return (
     <div className="min-h-screen bg-[#0A1429] text-white overflow-hidden relative">
@@ -1048,7 +1050,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">COMBO DECAY HUD BAR</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">LOCAL VS ONCHAIN HS COMPARISON</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1166,6 +1168,12 @@ export default function BasedDodge() {
                     
                     <div>ACCURACY</div>
                     <div className="text-right">{Math.floor(Math.random() * 15 + 82)}%</div>
+                    
+                    <div>LOCAL HIGH</div>
+                    <div className="text-right text-white">{localHS}</div>
+                    
+                    <div>ONCHAIN HIGH</div>
+                    <div className="text-right text-[#00F0FF]">{onchainHS}</div>
                   </div>
 
                   <div className="flex gap-4">
@@ -1324,7 +1332,7 @@ export default function BasedDodge() {
 
               {isConnected && (
                 <div className="mt-6 text-center text-xs text-white/70">
-                  Your onchain high score: {onchainHighScore ? Number(onchainHighScore).toLocaleString() : '—'}
+                  Your onchain high score: {onchainHS}
                 </div>
               )}
 
@@ -1387,7 +1395,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        COMBO DECAY HUD BAR • ON BASE
+        LOCAL VS ONCHAIN HIGH SCORE • ON BASE
       </footer>
     </div>
   );
