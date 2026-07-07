@@ -101,6 +101,7 @@ export default function BasedDodge() {
   const [slowMoActive, setSlowMoActive] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(true);
+  const [musicVolume, setMusicVolume] = useState(0.045);
   const [graphicsQuality, setGraphicsQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [fps, setFps] = useState(60);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -297,7 +298,7 @@ export default function BasedDodge() {
     osc.frequency.value = 62;
     filter.type = 'lowpass';
     filter.frequency.value = 280;
-    gain.gain.value = 0.045;
+    gain.gain.value = musicVolume;
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(audioContextRef.current.destination);
@@ -312,6 +313,9 @@ export default function BasedDodge() {
     const intensity = Math.min(1, (currentLevel - 1) * 0.12 + (multiplier - 1) * 0.25);
     musicOscRef.current.frequency.setTargetAtTime(62 + intensity * 38, audioContextRef.current!.currentTime, 0.3);
     musicFilterRef.current.frequency.setTargetAtTime(280 + intensity * 420, audioContextRef.current!.currentTime, 0.4);
+    if (musicGainRef.current) {
+      musicGainRef.current.gain.value = musicVolume;
+    }
   };
 
   const stopBackgroundMusic = () => {
@@ -372,7 +376,7 @@ export default function BasedDodge() {
       frameCountRef.current = 0;
       gameLoop();
     }, 1600);
-  }, [musicEnabled]);
+  }, [musicEnabled, musicVolume]);
 
   const togglePause = () => {
     if (!gameStarted) return;
@@ -1050,7 +1054,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">LOCAL VS ONCHAIN HS COMPARISON</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">MUSIC VOLUME SLIDER</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1212,6 +1216,30 @@ export default function BasedDodge() {
                     <span>MUSIC</span>
                     <button onClick={() => setMusicEnabled(!musicEnabled)} className={`px-6 py-1 rounded-full text-sm ${musicEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{musicEnabled ? 'ON' : 'OFF'}</button>
                   </div>
+                  {musicEnabled && (
+                    <div className="mt-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>VOLUME</span>
+                        <span>{Math.round(musicVolume * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="0.1" 
+                        step="0.001" 
+                        value={musicVolume} 
+                        onChange={(e) => {
+                          const newVol = parseFloat(e.target.value);
+                          setMusicVolume(newVol);
+                          if (musicGainRef.current) musicGainRef.current.gain.value = newVol;
+                        }}
+                        className="w-full accent-[#00F0FF]"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
                   <div className="flex justify-between mb-3">
                     <span>SOUND FX</span>
                     <button onClick={() => setSoundEnabled(!soundEnabled)} className={`px-6 py-1 rounded-full text-sm ${soundEnabled ? 'bg-[#00F0FF] text-black' : 'bg-white/10'}`}>{soundEnabled ? 'ON' : 'OFF'}</button>
@@ -1395,7 +1423,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        LOCAL VS ONCHAIN HIGH SCORE • ON BASE
+        MUSIC VOLUME SLIDER • ON BASE
       </footer>
     </div>
   );
