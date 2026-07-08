@@ -214,7 +214,9 @@ export default function BasedDodge() {
     setShowInstallPrompt(false);
     setDeferredPrompt(null);
     if (outcome === 'accepted') {
-      addToast("BASEDODGE INSTALLED! 🔥", 'milestone');
+      addToast("BASEDODGE INSTALLED SUCCESSFULLY! 🔥", 'milestone');
+    } else {
+      addToast("INSTALL CANCELLED", 'milestone');
     }
   };
 
@@ -1035,7 +1037,7 @@ export default function BasedDodge() {
             <button onClick={() => setShowAchievements(true)} className="px-5 py-2 text-sm border border-[#00F0FF50] hover:border-[#00F0FF] rounded-full transition">ACHIEVEMENTS</button>
             <button onClick={() => setShowLeaderboard(true)} className="px-6 py-2.5 text-sm font-medium border border-[#0052FF50] hover:border-[#00F0FF] rounded-full transition-colors">LEADERBOARD</button>
             {showInstallPrompt && (
-              <button onClick={installPWA} className="px-6 py-2.5 text-sm font-medium bg-gradient-to-r from-[#00F0FF] to-[#0052FF] rounded-full">INSTALL APP</button>
+              <button onClick={installPWA} className="px-6 py-2.5 text-sm font-medium bg-gradient-to-r from-[#00F0FF] to-[#0052FF] rounded-full">INSTALL PWA</button>
             )}
             <Wallet>
               <ConnectWallet />
@@ -1054,7 +1056,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">MUSIC VOLUME SLIDER</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">FULL PWA INSTALL SUPPORT</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1423,7 +1425,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        MUSIC VOLUME SLIDER • ON BASE
+        PWA MANIFEST + INSTALL • ON BASE
       </footer>
     </div>
   );
