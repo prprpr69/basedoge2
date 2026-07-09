@@ -1056,7 +1056,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">FULL PWA INSTALL SUPPORT</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">MANUAL ONCHAIN SUBMIT BUTTON</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1182,9 +1182,14 @@ export default function BasedDodge() {
                     <div className="text-right text-[#00F0FF]">{onchainHS}</div>
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 flex-wrap justify-center">
                     <button onClick={startGame} className="px-14 py-6 bg-gradient-to-r from-[#0052FF] to-[#00F0FF] rounded-2xl text-2xl font-bold">PLAY AGAIN</button>
                     <button onClick={() => shareToX(finalScore)} className="px-14 py-6 border-2 border-[#00F0FF] hover:bg-[#00F0FF] hover:text-black rounded-2xl text-2xl font-bold transition">SHARE ON X</button>
+                    {isConnected && finalScore > onchainHS && (
+                      <button onClick={() => submitOnchainScore(finalScore)} disabled={isSubmitting} className="px-14 py-6 border-2 border-[#C724FF] hover:bg-[#C724FF] hover:text-black rounded-2xl text-2xl font-bold transition disabled:opacity-50">
+                        {isSubmitting ? "SUBMITTING..." : "SUBMIT TO ONCHAIN"}
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1425,7 +1430,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        PWA MANIFEST + INSTALL • ON BASE
+        MANUAL ONCHAIN SUBMIT • ON BASE
       </footer>
     </div>
   );
