@@ -396,13 +396,18 @@ export default function BasedDodge() {
     stopBackgroundMusic();
 
     const finalScore = Math.floor(score * multiplier);
+    const isNewHigh = finalScore > highScore;
     setGameOver(true);
     setGameStarted(false);
     setIsPaused(false);
 
     saveHighScore(finalScore);
 
-    if (finalScore > highScore) triggerConfetti(1.8);
+    if (isNewHigh) {
+      triggerConfetti(2.2);
+    } else if (finalScore > 800) {
+      triggerConfetti(1.4);
+    }
 
     achievements.forEach(ach => {
       if (!ach.unlocked && finalScore >= ach.scoreRequired) unlockAchievement(ach.id);
@@ -1056,7 +1061,7 @@ export default function BasedDodge() {
               <div className="text-[152px] md:text-[172px] font-black tracking-[-9px] leading-none bg-gradient-to-b from-white via-[#00F0FF] to-[#0052FF] bg-clip-text text-transparent">
                 BASEDDODGE
               </div>
-              <p className="text-2xl text-[#00F0FF] mt-2">MANUAL ONCHAIN SUBMIT BUTTON</p>
+              <p className="text-2xl text-[#00F0FF] mt-2">EXTRA CONFETTI ON NEW HIGH</p>
               <motion.button onClick={startGame} whileHover={{ scale: 1.06 }} className="mt-12 px-28 py-8 text-4xl font-bold rounded-3xl bg-gradient-to-r from-[#0052FF] to-[#00F0FF]">
                 LAUNCH INTO BASE
               </motion.button>
@@ -1430,7 +1435,7 @@ export default function BasedDodge() {
       </div>
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs font-mono text-[#0052FF70]">
-        MANUAL ONCHAIN SUBMIT • ON BASE
+        EXTRA CONFETTI ON NEW HIGH • ON BASE
       </footer>
     </div>
   );
